@@ -28,8 +28,8 @@ function App(): React.JSX.Element {
 function AppContent() {
   const chatSectionRef = useRef<ChatSectionRef>(null);
 
+  //부모 컴포넌트에서 자식 컴포넌트의 handleSendMessage를 정의
   const handleSend = (message: string) => {
-    // ChatSection의 handleSendMessage를 직접 호출
     chatSectionRef.current?.handleSendMessage(message, true);
   };
 
@@ -41,6 +41,8 @@ function AppContent() {
     <View style={styles.container}>
       <Header />
       <ChatSection ref={chatSectionRef} />
+
+      {/* 정의한 handleSend를 자식(Footer)에 전달 */}
       <Footer onSend={handleSend} onSTT={handleSTT} />
     </View>
   );

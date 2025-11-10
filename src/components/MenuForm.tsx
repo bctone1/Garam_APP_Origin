@@ -67,7 +67,7 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 18,

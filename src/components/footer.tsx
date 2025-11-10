@@ -61,7 +61,7 @@ export default function Footer({ onSend, onSTT }: FooterProps) {
                     </View>
 
                     <View style={styles.inputToolsRight}>
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             style={[
                                 styles.inputButton,
                                 styles.micButton,
@@ -74,7 +74,7 @@ export default function Footer({ onSend, onSTT }: FooterProps) {
                                 size={20}
                                 color={micStatus ? '#fff' : '#333'}
                             />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                         <TouchableOpacity
                             style={[styles.inputButton, styles.sendButton]}
                             onPress={handleSend}

@@ -18,7 +18,7 @@ interface FAQ {
 interface SubMenuFormProps {
   category: Category;
   faqs: FAQ[];
-  onSelectFAQ: (category: Category, faq: FAQ) => void;
+  onSelectFAQ: (faq: FAQ) => void;
   onBack: () => void;
 }
 
@@ -26,21 +26,21 @@ export default function SubMenuForm({ category, faqs, onSelectFAQ, onBack }: Sub
   return (
     <View style={styles.container}>
       <View style={styles.underline} />
-      
+
       <View style={styles.submenuWrap}>
         <Text style={styles.submenuTitle}>{category.name}</Text>
-        
+
         {faqs.length === 0 ? (
           <Text style={styles.emptyText}>등록된 질문이 없습니다.</Text>
         ) : (
           <>
             <Text style={styles.submenuDesc}>번호를 입력하거나 클릭하여 세부 문제를 선택하세요.</Text>
-            
+
             {faqs.map((faq, index) => (
               <TouchableOpacity
                 key={faq.id}
                 style={styles.submenuItem}
-                onPress={() => onSelectFAQ(category, faq)}
+                onPress={() => onSelectFAQ(faq)}
               >
                 <View style={styles.submenuId}>
                   <Text style={styles.submenuIdText}>{index + 1}</Text>
@@ -52,7 +52,7 @@ export default function SubMenuForm({ category, faqs, onSelectFAQ, onBack }: Sub
             ))}
           </>
         )}
-        
+
         <View style={styles.bottomNav}>
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
             <Icon name="arrow-back" size={18} color="#007AFF" style={styles.backIcon} />
