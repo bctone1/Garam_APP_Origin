@@ -48,6 +48,96 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         phone: "",
         detail: "",
     });
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const hasRunRef = useRef(false);
+
+    useEffect(() => {
+        if (hasRunRef.current) return;
+
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+        }
+
+        timerRef.current = setTimeout(() => {
+            setSectionContent(prev => [
+                ...prev,
+                <View style={styles.feedbackForm} key={`inquiry-${Date.now()}`}>
+                    <Text style={styles.titleText}>잠깐만요!</Text>
+                    <Text style={styles.feedbackText}>
+                        오늘 상담이 도움이 되셨나요?{"\n"}
+                        여러분의 소중한 의견을 들려주세요.
+                    </Text>
+
+                    <View style={styles.feedbackButtonContainer}>
+                        <TouchableOpacity
+                            style={[styles.feedbackButton, styles.reviewButton]}
+                            onPress={() => handleReview("helpful")}
+                        >
+                            <Text style={styles.buttonText}>👍 네, 도움이 되었어요</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.feedbackButton, styles.reviewButton]}
+                            onPress={() => handleReview("not_helpful")}
+                        >
+                            <Text style={styles.buttonText}>👎 아니요, 더 개선이 필요해요</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>,
+                <View style={styles.bottomNav}>
+                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                        <Icon name="home" size={20} color="#333" />
+                        <Text style={styles.homeText}>처음으로</Text>
+                    </TouchableOpacity>
+                </View>
+            ]);
+            hasRunRef.current = true;
+        }, 5000);
+
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [sectionContent]);
+
+
+    const handleReview = (result: string) => {
+        axios.post(`${REACT_APP_API_URL}/chat/feedback`, {
+            rating: result,
+            session_id: newSession
+        }).then((res) => {
+            console.log(res.data);
+            setSectionContent(prev => [
+                ...prev,
+                <View style={styles.feedbackForm} key={`inquiry-${Date.now()}`}>
+                    <Text style={styles.titleText}>감사합니다!</Text>
+                    <Text style={styles.feedbackText}>
+                        소중한 의견이 반영되었습니다!
+                    </Text>
+
+                    <View style={styles.feedbackButtonContainer}>
+                        <TouchableOpacity style={[styles.feedbackButton, styles.reviewButton]}>
+                            <Text style={styles.buttonText}>대표번호{"\n"}1588-1234</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.feedbackButton, styles.reviewButton]}>
+                            <Text style={styles.buttonText}>기술지원 이메일{"\n"}tech@garampos.com</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>,
+                <View style={styles.bottomNav}>
+                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                        <Icon name="home" size={20} color="#333" />
+                        <Text style={styles.homeText}>처음으로</Text>
+                    </TouchableOpacity>
+                </View>
+            ]);
+        }).catch((err) => {
+            console.error(err);
+        });
+    }
+
+
+
 
     const createInquiry = (email: string) => {
         axios.post(`${REACT_APP_API_URL}/inquiries/`, {
@@ -188,7 +278,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             phone: "",
             detail: "",
         });
-        
+
         axios.get(`${process.env.REACT_APP_API_URL}/faqs`, {
             params: {
                 offset: 0,
@@ -452,14 +542,41 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                             감사합니다! 🙏
                         </Text>
                     </View>
-                </View>,
-                <View style={styles.bottomNav}>
-                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
-                        <Icon name="home" size={10} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
-                    </TouchableOpacity>
                 </View>
                 ]);
+                setSectionContent(prev => [
+                    ...prev,
+                    <View style={styles.feedbackForm} key={`inquiry-${Date.now()}`}>
+                        <Text style={styles.titleText}>잠깐만요!</Text>
+                        <Text style={styles.feedbackText}>
+                            오늘 상담이 도움이 되셨나요?{"\n"}
+                            여러분의 소중한 의견을 들려주세요.
+                        </Text>
+
+                        <View style={styles.feedbackButtonContainer}>
+                            <TouchableOpacity
+                                style={[styles.feedbackButton, styles.reviewButton]}
+                                onPress={() => handleReview("helpful")}
+                            >
+                                <Text style={styles.buttonText}>👍 네, 도움이 되었어요</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.feedbackButton, styles.reviewButton]}
+                                onPress={() => handleReview("not_helpful")}
+                            >
+                                <Text style={styles.buttonText}>👎 아니요, 더 개선이 필요해요</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>,
+                    <View style={styles.bottomNav}>
+                        <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                            <Icon name="home" size={20} color="#333" />
+                            <Text style={styles.homeText}>처음으로</Text>
+                        </TouchableOpacity>
+                    </View>
+                ]);
+
                 setInquiryStep(0);
                 setInquiryStatus(false);
             }
@@ -563,6 +680,52 @@ async function parseError(response: Response) {
 }
 
 const styles = StyleSheet.create({
+    feedbackForm: {
+        backgroundColor: "#e8f5ff",
+        padding: 20,
+        marginVertical: 10,
+        borderRadius: 12,
+        alignItems: "center",
+    },
+    titleText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        marginBottom: 8,
+        textAlign: "center",
+        color: '#333',
+    },
+    feedbackText: {
+        fontSize: 16,
+        color: "#2a3a5f",
+        textAlign: "center",
+        marginBottom: 20,
+        lineHeight: 22,
+    },
+    feedbackButtonContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        width: "100%",
+    },
+    feedbackButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 25,
+        borderWidth: 1,
+        alignItems: "center",
+        marginHorizontal: 5,
+    },
+
+    reviewButton: {
+        borderColor: "#9E9E9E",
+        backgroundColor: "#FFFFFF",
+    },
+    buttonText: {
+        fontSize: 12,
+        color: "#323232",
+        // fontWeight: "500",
+    },
+
+
     chatSection: {
         flex: 1,
         backgroundColor: '#fff',
