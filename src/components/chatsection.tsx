@@ -8,13 +8,6 @@ import MenuForm from './MenuForm';
 import SubMenuForm from './SubMenuForm';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-
-interface Message {
-    id: string;
-    text: string;
-    isUser: boolean;
-}
-
 interface Category {
     id: number;
     name: string;
@@ -53,11 +46,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
     useEffect(() => {
         if (hasRunRef.current) return;
-
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-        }
-
+        if (timerRef.current) { clearTimeout(timerRef.current); }
         timerRef.current = setTimeout(() => {
             setSectionContent(prev => [
                 ...prev,
@@ -93,7 +82,6 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             ]);
             hasRunRef.current = true;
         }, 5000);
-
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
@@ -136,9 +124,6 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         });
     }
 
-
-
-
     const createInquiry = (email: string) => {
         axios.post(`${REACT_APP_API_URL}/inquiries/`, {
             customer_name: inquiryInfo.name,
@@ -177,6 +162,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     };
 
     const getSubmenu = (category: Category) => {
+        setInquiryStep(0);
+        setInquiryStatus(false);
         axios.get(`${REACT_APP_API_URL}/faqs`, {
             params: {
                 offset: 0,
@@ -243,7 +230,6 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             </TouchableOpacity>
         </View>
         ]);
-        // setInquiryStep(1);
     }
 
     const getFirstMenu = () => {
