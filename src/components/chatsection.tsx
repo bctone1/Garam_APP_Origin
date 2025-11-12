@@ -143,6 +143,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         axios.get(`${REACT_APP_API_URL}/system/quick-categories`).then((res) => {
             setCategories(res.data);
         }).catch((err) => {
+            console.error('API 오류 상세:', err);
             Alert.alert('오류', '카테고리 목록을 불러오는 중 오류가 발생했습니다.');
         });
     }
