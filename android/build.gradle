@@ -19,3 +19,20 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+    
+    tasks.whenTaskAdded { task ->
+        if (task.name.contains("compile") && task.name.contains("Java")) {
+            if (task instanceof JavaCompile) {
+                task.sourceCompatibility = JavaVersion.VERSION_17
+                task.targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+    }
+}

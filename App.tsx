@@ -34,7 +34,12 @@ function AppContent() {
   };
 
   const handleSTT = (isActive: boolean) => {
-    Alert.alert('음성 인식', isActive ? '음성 인식 종료' : '음성 인식 시작');
+    // Alert.alert('음성 인식', isActive ? '음성 인식 종료' : '음성 인식 시작');
+    if (!isActive) {
+      chatSectionRef.current?.startSTT();
+    } else {
+      chatSectionRef.current?.stopSTT();
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, ScrollView, Text, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Alert, TouchableOpacity, Platform, PermissionsAndroid } from 'react-native';
 import axios from 'axios';
 import { REACT_APP_API_URL } from '@env';
 import MaskedView from '@react-native-masked-view/masked-view';
@@ -7,6 +7,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import MenuForm from './MenuForm';
 import SubMenuForm from './SubMenuForm';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import RNFS from "react-native-fs";
 
 interface Category {
     id: number;
@@ -23,6 +25,8 @@ interface FAQ {
 
 export interface ChatSectionRef {
     handleSendMessage: (text: string, isUser?: boolean) => void;
+    startSTT: () => void;
+    stopSTT: () => void;
 }
 
 const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
@@ -43,6 +47,13 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     });
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const hasRunRef = useRef(false);
+    const audioRecorderPlayer = useRef<any>(null);
+    const recordingPathRef = useRef<string | null>(null);
+    const silenceTimer = useRef<NodeJS.Timeout | null>(null);
+    const recordBackListener = useRef<any>(null);
+
+    const SILENCE_THRESHOLD = 0.01;
+    const SILENCE_TIMEOUT = 2000;
 
     useEffect(() => {
         if (hasRunRef.current) return;
@@ -595,9 +606,197 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         }
     }, [requestAssistantAnswer, newSession, inquiryStatus, inquiryStep, inquiryInfo]);
 
+
+
+    /** 🟦 2. STT 시작 */
+    const startSTT = async () => {
+        console.log("🎤 STT 시작");
+
+        if (!audioRecorderPlayer.current) {
+            audioRecorderPlayer.current = new AudioRecorderPlayer();
+        }
+
+        /** 권한 요청 */
+        if (Platform.OS === "android") {
+            const granted = await PermissionsAndroid.requestMultiple([
+                PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+            ]);
+
+            if (granted["android.permission.RECORD_AUDIO"] !== "granted") {
+                Alert.alert("마이크 권한이 필요합니다.");
+                return;
+            }
+        }
+
+        try {
+            // 🟦 Android는 앱 내부 저장소 경로 사용
+            const path = Platform.OS === "android"
+                ? `${RNFS.DocumentDirectoryPath}/${Date.now()}_record.mp4`
+                : "record.m4a";
+
+            const uri = await audioRecorderPlayer.current.startRecorder(path, {
+                meteringEnabled: true,   // 중요!
+            });
+
+            recordingPathRef.current = uri;
+
+            console.log("녹음 시작:", uri);
+
+            // monitorSilence();
+
+        } catch (error) {
+            console.error("녹음 시작 오류:", error);
+            Alert.alert("녹음을 시작할 수 없습니다.");
+        }
+    };
+
+
+    /** 🟦 3. 무음 감지 */
+    const monitorSilence = () => {
+        if (!audioRecorderPlayer.current) return;
+
+        recordBackListener.current = audioRecorderPlayer.current.addRecordBackListener((e: any) => {
+            const currentMetering = e.currentMetering || 0;
+            const rms = Math.abs(currentMetering / 160);
+
+            if (rms < SILENCE_THRESHOLD) {
+                if (!silenceTimer.current) {
+                    silenceTimer.current = setTimeout(() => {
+                        stopSTT();
+                    }, SILENCE_TIMEOUT);
+                }
+            } else {
+                if (silenceTimer.current) {
+                    clearTimeout(silenceTimer.current);
+                    silenceTimer.current = null;
+                }
+            }
+        });
+    };
+
+    /** 🟦 4. STT 종료 + 서버 업로드 */
+    const stopSTT = async () => {
+        console.log("🛑 STT 종료");
+
+        if (!audioRecorderPlayer.current) return;
+
+        try {
+            // 1) 리스너 제거
+            if (recordBackListener.current) {
+                audioRecorderPlayer.current.removeRecordBackListener();
+                recordBackListener.current = null;
+            }
+
+            // 2) 무음 타이머 제거
+            if (silenceTimer.current) {
+                clearTimeout(silenceTimer.current);
+                silenceTimer.current = null;
+            }
+
+            // 3) 녹음 중지
+            let uri = await audioRecorderPlayer.current.stopRecorder();
+
+            // 4) Android → stopRecorder()가 빈 문자열 반환하는 경우 fallback
+            if (!uri || uri.trim() === "") {
+                uri = recordingPathRef.current;
+            }
+
+            // 5) iOS는 파일 생성 지연 문제 해결
+            await new Promise(res => setTimeout(res, 150));
+
+            // 6) 서버 업로드
+            uploadToServer(uri);
+
+        } catch (error) {
+            console.error("녹음 종료 오류:", error);
+            Alert.alert("녹음을 종료할 수 없습니다.");
+        }
+    };
+
+
+    /** 🟦 5. 서버에 보내고 → ChatSection에서 UI 업데이트 */
+    const uploadToServer = async (uri: string) => {
+        try {
+            if (!uri) {
+                Alert.alert("녹음 파일이 없습니다.");
+                return;
+            }
+
+            const formData = new FormData();
+
+            const fileExtension = Platform.OS === 'ios' ? 'm4a' : 'mp4';
+            const mimeType = Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4';
+
+            formData.append("file", {
+                uri: uri,                  // Android: RNFS 경로 그대로, iOS: 상대경로 가능
+                type: mimeType,
+                name: `record.${fileExtension}`,
+            } as any);
+
+            formData.append("lang", "Kor");
+
+            // 서버 URL: 모바일에서 접근 가능한 IP 혹은 도메인 사용
+            const apiUrl = REACT_APP_API_URL; // 예: "http://192.168.x.x:8000"
+
+            const res = await fetch(`${apiUrl}/llm/clova_stt`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!res.ok) {
+                console.error("서버 응답 오류:", res.status, await res.text());
+                Alert.alert("서버 처리 중 오류가 발생했습니다.");
+                return;
+            }
+
+            const data = await res.json();
+
+            setSectionContent(prev => [
+                ...prev,
+                <View
+                    key={`message-${Date.now()}`}
+                    style={[
+                        styles.messageContainer,
+                        styles.userMessage
+                    ]}
+                >
+                    <Text style={[
+                        styles.messageText,
+                        styles.userMessageText
+                    ]}>
+                        {data.text}
+                    </Text>
+                </View>
+            ]);
+
+            const STTdata = await requestAssistantAnswer(data.text);
+            const answer = STTdata.answer?.trim?.() ? STTdata.answer.trim() : "응답을 가져올 수 없습니다.";
+            const assistantComponent = (
+                <View key={`message-${Date.now()}`} style={[styles.messageContainer, styles.botMessage,]}>
+                    <Text style={[
+                        styles.messageText, styles.botMessageText,
+                    ]}>
+                        {answer}
+                    </Text>
+                </View>
+            );
+            setSectionContent(prev => [...prev, assistantComponent]);
+
+
+
+        } catch (error) {
+            console.error('서버 업로드 오류:', error);
+            Alert.alert("음성 인식 처리 중 오류가 발생했습니다.");
+        }
+    };
+
+
     useImperativeHandle(ref, () => ({
         handleSendMessage,
-    }), [handleSendMessage]);
+        startSTT,
+        stopSTT,
+    }), [handleSendMessage, startSTT, stopSTT]);
 
     useEffect(() => {
         if (scrollViewRef.current && sectionContent.length > 0) {

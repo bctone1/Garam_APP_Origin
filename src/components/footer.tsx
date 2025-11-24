@@ -61,7 +61,7 @@ export default function Footer({ onSend, onSTT }: FooterProps) {
                     </View>
 
                     <View style={styles.inputToolsRight}>
-                        {/* <TouchableOpacity
+                        <TouchableOpacity
                             style={[
                                 styles.inputButton,
                                 styles.micButton,
@@ -74,7 +74,7 @@ export default function Footer({ onSend, onSTT }: FooterProps) {
                                 size={20}
                                 color={micStatus ? '#fff' : '#333'}
                             />
-                        </TouchableOpacity> */}
+                        </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.inputButton, styles.sendButton]}
                             onPress={handleSend}
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderWidth: 1,
-        borderColor:'#3b82f6',
+        borderColor: '#3b82f6',
         // React Native에서는 boxShadow 대신 shadowColor, shadowOffset 등을 사용
         // boxShadow: '0 4px 12px 2px rgba(0, 0, 0, 0.1)',
     },
