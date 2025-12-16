@@ -581,16 +581,16 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         } else {
             const start = performance.now();
             const latencyMs = Math.round(performance.now() - start);
-            axios.post(`${REACT_APP_API_URL}/chat/sessions/${newSession}/messages`, {
-                session_id: newSession,
-                role: "user",
-                content: text,
-                response_latency_ms: latencyMs,
-            }).then((res) => {
-                console.log(res.data);
-            }).catch((err) => {
-                console.log(err);
-            });
+            // axios.post(`${REACT_APP_API_URL}/chat/sessions/${newSession}/messages`, {
+            //     session_id: newSession,
+            //     role: "user",
+            //     content: text,
+            //     response_latency_ms: latencyMs,
+            // }).then((res) => {
+            //     console.log(res.data);
+            // }).catch((err) => {
+            //     console.log(err);
+            // });
             const data = await requestAssistantAnswer(text);
             const answer = data.answer?.trim?.() ? data.answer.trim() : "응답을 가져올 수 없습니다.";
             const assistantComponent = (
