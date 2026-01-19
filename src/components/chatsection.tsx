@@ -92,7 +92,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 </View>
             ]);
             hasRunRef.current = true;
-        }, 5000);
+        }, 9000);
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
