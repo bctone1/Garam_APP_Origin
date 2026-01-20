@@ -33,6 +33,16 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     const scrollViewRef = useRef<ScrollView>(null);
     const [newSession, setNewSession] = useState<string | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [systemSettings, setsystemSettings] = useState<any>({
+        welcome_title: "",
+        welcome_message: "",
+        emergency_phone: "",
+        emergency_email: "",
+        operating_hours: "",
+        file_upload_mode: "",
+        session_duration: "",
+        max_messages: ""
+    });
     const [sectionContent, setSectionContent] = useState<React.ReactNode[]>([]);
     const [inquiryStatus, setInquiryStatus] = useState(false);
     const [inquiryStep, setInquiryStep] = useState(0);
@@ -149,6 +159,13 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         });
     }
 
+    const getSystemSettings = () => {
+        axios.get(`${REACT_APP_API_URL}/system/setting`).then((res) => {
+            setsystemSettings(res.data);
+        }).catch((err) => {
+            console.error(err);
+        });
+    }
 
     const getCategory = () => {
         axios.get(`${REACT_APP_API_URL}/system/quick-categories`).then((res) => {
@@ -277,7 +294,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             detail: "",
         });
 
-        axios.get(`${process.env.REACT_APP_API_URL}/faqs`, {
+        axios.get(`${REACT_APP_API_URL}/faqs`, {
             params: {
                 offset: 0,
                 limit: 3,
@@ -305,6 +322,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     useEffect(() => {
         createSession();
         getCategory();
+        getSystemSettings();
     }, []);
 
     useEffect(() => {
@@ -812,18 +830,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             style={styles.chatSection}
             contentContainerStyle={styles.chatContent}
         >
-            {/* <MaskedView maskElement={<Text style={styles.gradientText}>안녕하세요! 가람포스텍 AI 지원센터입니다.</Text>}>
-                <LinearGradient
-                    colors={['#F3AE2F', '#AD61EF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                >
-                    <Text style={[styles.gradientText, { opacity: 0 }]}>dkdkdk</Text>
-                </LinearGradient>
-            </MaskedView> */}
-
-            <Text style={styles.title}>안녕하세요! 가람포스텍 AI 지원센터입니다.</Text>
-            <Text style={styles.desc}>POS 시스템, 키오스크 관련 문의를 선택하세요.</Text>
+            <Text style={styles.title}>{systemSettings.welcome_title}</Text>
+            <Text style={styles.desc}>{systemSettings.welcome_message}</Text>
 
             {sectionContent.map((content, i) => {
                 // ReactElement인 경우 key를 추출, 아니면 인덱스 사용

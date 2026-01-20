@@ -81,9 +81,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   buttonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 12,
   },
   button: {
+    width: '48%',      // 👈 2열 핵심
     backgroundColor: '#f0f0f0',
     borderRadius: 12,
     padding: 16,
@@ -110,13 +114,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
   descText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#777',
   },
 });
