@@ -13,8 +13,8 @@ export default function Header() {
 
                 {/* 제목/부제 */}
                 <View style={styles.titleContainer}>
-                    <Text style={styles.title}>가람포스텍 AI 지원센터</Text>
-                    <Text style={styles.subtitle}>24시간 스마트 고객지원 서비스</Text>
+                    <Text style={styles.title}>Garam Postech AI Support Center</Text>
+                    <Text style={styles.subtitle}>24/7 Smart Customer Support</Text>
                 </View>
             </View>
 

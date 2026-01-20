@@ -114,13 +114,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
   descText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#777',
   },
 });
