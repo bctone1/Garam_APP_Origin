@@ -25,8 +25,8 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
               <Text style={styles.iconText}>💬</Text>
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.titleText}>문의하기</Text>
-              <Text style={styles.descText}>직접 상담 및 지원 요청</Text>
+              <Text style={styles.titleText}>Contact Us</Text>
+              <Text style={styles.descText}>Direct consultation and support</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -37,8 +37,8 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
               <Text style={styles.iconText}>❓</Text>
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.titleText}>자주하는 질문</Text>
-              <Text style={styles.descText}>질문 목록 보기</Text>
+              <Text style={styles.titleText}>FAQ</Text>
+              <Text style={styles.descText}>View questions</Text>
             </View>
           </View>
         </TouchableOpacity>

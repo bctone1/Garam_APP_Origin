@@ -72,10 +72,10 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             setSectionContent(prev => [
                 ...prev,
                 <View style={styles.feedbackForm} key={`inquiry-${Date.now()}`}>
-                    <Text style={styles.titleText}>잠깐만요!</Text>
+                    <Text style={styles.titleText}>Wait a moment!</Text>
                     <Text style={styles.feedbackText}>
-                        오늘 상담이 도움이 되셨나요?{"\n"}
-                        여러분의 소중한 의견을 들려주세요.
+                        Was today's consultation helpful?{"\n"}
+                        Please share your valuable feedback.
                     </Text>
 
                     <View style={styles.feedbackButtonContainer}>
@@ -83,21 +83,21 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                             style={[styles.feedbackButton, styles.reviewButton]}
                             onPress={() => handleReview("helpful")}
                         >
-                            <Text style={styles.buttonText}>👍 네, 도움이 되었어요</Text>
+                            <Text style={styles.buttonText}>👍 Yes, it was helpful</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             style={[styles.feedbackButton, styles.reviewButton]}
                             onPress={() => handleReview("not_helpful")}
                         >
-                            <Text style={styles.buttonText}>👎 아니요, 더 개선이 필요해요</Text>
+                            <Text style={styles.buttonText}>👎 No, needs improvement</Text>
                         </TouchableOpacity>
                     </View>
                 </View>,
                 <View style={styles.bottomNav}>
                     <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                         <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
+                        <Text style={styles.homeText}>Home</Text>
                     </TouchableOpacity>
                 </View>
             ]);
@@ -118,25 +118,25 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             setSectionContent(prev => [
                 ...prev,
                 <View style={styles.feedbackForm} key={`inquiry-${Date.now()}`}>
-                    <Text style={styles.titleText}>감사합니다!</Text>
+                    <Text style={styles.titleText}>Thank you!</Text>
                     <Text style={styles.feedbackText}>
-                        소중한 의견이 반영되었습니다!
+                        Your valuable feedback has been recorded!
                     </Text>
 
                     <View style={styles.feedbackButtonContainer}>
                         <TouchableOpacity style={[styles.feedbackButton, styles.reviewButton]}>
-                            <Text style={styles.buttonText}>대표번호{"\n"}1588-1234</Text>
+                            <Text style={styles.buttonText}>Main Number{"\n"}1588-1234</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={[styles.feedbackButton, styles.reviewButton]}>
-                            <Text style={styles.buttonText}>기술지원 이메일{"\n"}tech@garampos.com</Text>
+                            <Text style={styles.buttonText}>Technical Support Email{"\n"}tech@garampos.com</Text>
                         </TouchableOpacity>
                     </View>
                 </View>,
                 <View style={styles.bottomNav}>
                     <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                         <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
+                        <Text style={styles.homeText}>Home</Text>
                     </TouchableOpacity>
                 </View>
             ]);
@@ -171,14 +171,14 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         axios.get(`${REACT_APP_API_URL}/system/quick-categories`).then((res) => {
             setCategories(res.data);
         }).catch((err) => {
-            console.error('API 오류 상세:', err);
-            Alert.alert('오류', '카테고리 목록을 불러오는 중 오류가 발생했습니다.');
+            console.error('API error details:', err);
+            Alert.alert('Error', 'An error occurred while loading the category list.');
         });
     }
 
     const createSession = () => {
         axios.post(`${REACT_APP_API_URL}/chat/sessions`, {
-            title: "모바일 대화",
+            title: "Mobile Chat",
             preview: "",
             resolved: false,
             model_id: 1
@@ -213,7 +213,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             ]);
         }).catch((err) => {
             console.log(err);
-            Alert.alert('오류', 'FAQ 목록을 불러오는 중 오류가 발생했습니다.');
+            Alert.alert('Error', 'An error occurred while loading the FAQ list.');
         });
     };
 
@@ -230,32 +230,32 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             <View style={styles.header}>
                 <View style={styles.stepContainer}>
                     <Text style={styles.stepNumber}>1</Text>
-                    <Text style={styles.stepText}>/5 단계</Text>
+                    <Text style={styles.stepText}>/5 Step</Text>
                 </View>
 
                 <View style={styles.headerTextContainer}>
-                    <Text style={styles.inquirytitle}>문의 정보 수집</Text>
-                    <Text style={styles.question}>성함을 알려주세요</Text>
+                    <Text style={styles.inquirytitle}>Inquiry Information Collection</Text>
+                    <Text style={styles.question}>Please provide your name</Text>
                 </View>
             </View>
 
             {/* Message Section */}
             <View style={styles.messageSection}>
-                <Text style={styles.subTitle}>문의하기 시작</Text>
+                <Text style={styles.subTitle}>Start Inquiry</Text>
 
                 <Text style={styles.assistantText}>
-                    안녕하세요! 문의사항을 접수해드리겠습니다.{"\n"}
-                    빠른 처리를 위해 몇 가지 정보를 수집하겠습니다.
+                    Hello! We will process your inquiry.{"\n"}
+                    We will collect some information for quick processing.
                 </Text>
 
-                <Text style={styles.assistantBold}>첫 번째로, 성함을 알려주세요.</Text>
-                <Text style={styles.assistantText}>(예: 홍길동)</Text>
+                <Text style={styles.assistantBold}>First, please provide your name.</Text>
+                <Text style={styles.assistantText}>(e.g., John Doe)</Text>
             </View>
         </View>,
         <View style={styles.bottomNav}>
             <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                 <Icon name="home" size={20} color="#333" />
-                <Text style={styles.homeText}>처음으로</Text>
+                <Text style={styles.homeText}>Home</Text>
             </TouchableOpacity>
         </View>
         ]);
@@ -271,7 +271,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             phone: "",
             detail: "",
         });
-        // 첫 메뉴로 돌아가기
+        // Return to first menu
         setSectionContent(prev => [
             ...prev,
             <MenuForm
@@ -307,7 +307,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 ...prev,
                 <SubMenuForm
                     key={`submenu-${Date.now()}`}
-                    category={{ id: 0, name: "자주하는 질문", description: "자주하는 질문" }}
+                    category={{ id: 0, name: "FAQ", description: "Frequently Asked Questions" }}
                     faqs={faqs}
                     onSelectFAQ={getAnswer}
                     onBack={getFirstMenu}
@@ -331,7 +331,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         }
     }, [categories]);
 
-    // AI 답변 요청 함수
+    // AI answer request function
     const requestAssistantAnswer = React.useCallback(async (question: string) => {
         try {
             const payload = {
@@ -389,30 +389,30 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
                             <Text style={styles.stepNumber}>2</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepText}>/5 Step</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>회사 정보 수집</Text>
-                            <Text style={styles.question}>회사명을 알려주세요.</Text>
+                            <Text style={styles.inquirytitle}>Company Information Collection</Text>
+                            <Text style={styles.question}>Please provide your company name.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
-                        <Text style={styles.subTitle}>{text}님, 안녕하세요!</Text>
+                        <Text style={styles.subTitle}>Hello, {text}!</Text>
 
                         <Text style={styles.assistantText}>
-                            두 번째로, 거래처(회사명)을 알려주세요.{"\n"}
-                            개인 문의인 경우 "개인"이라고 입력해주세요.{"\n"}
-                            (예: 가람포스텍, 개인)
+                            Second, please provide your company name.{"\n"}
+                            For personal inquiries, please enter "Personal".{"\n"}
+                            (e.g., Garam POS Tech, Personal)
                         </Text>
                     </View>
                 </View>,
                 <View style={styles.bottomNav}>
                     <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                         <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
+                        <Text style={styles.homeText}>Home</Text>
                     </TouchableOpacity>
                 </View>
                 ]);
@@ -429,28 +429,28 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
                             <Text style={styles.stepNumber}>3</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepText}>/5 Step</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>연락처</Text>
-                            <Text style={styles.question}>연락처를 기입해주세요.</Text>
+                            <Text style={styles.inquirytitle}>Contact</Text>
+                            <Text style={styles.question}>Please enter your contact information.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
                         <Text style={styles.assistantText}>
-                            세 번째로, 연락처를 기입해주세요.{"\n"}
-                            빠른 처리를 위해 필요합니다.{"\n"}
-                            (예: 010-1234-5678)
+                            Third, please enter your contact information.{"\n"}
+                            This is required for quick processing.{"\n"}
+                            (e.g., 010-1234-5678)
                         </Text>
                     </View>
                 </View>,
                 <View style={styles.bottomNav}>
                     <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                         <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
+                        <Text style={styles.homeText}>Home</Text>
                     </TouchableOpacity>
                 </View>
                 ]);
@@ -467,28 +467,28 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
                             <Text style={styles.stepNumber}>4</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepText}>/5 Step</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>문의 내용</Text>
-                            <Text style={styles.question}>문의내용을 입력해주세요.</Text>
+                            <Text style={styles.inquirytitle}>Inquiry Details</Text>
+                            <Text style={styles.question}>Please enter your inquiry details.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
                         <Text style={styles.assistantText}>
-                            구체적인 문의 내용을 알려주세요.{"\n"}
-                            자세히 설명해주실수록 더 정확한 지원이 가능합니다.{"\n"}
-                            (예: 카드리더기 오류로 결제가 안됩니다, POS 용지 부족으로 용지 요청드립니다)
+                            Please provide specific inquiry details.{"\n"}
+                            The more detailed your description, the more accurate support we can provide.{"\n"}
+                            (e.g., Card reader error preventing payment, POS paper shortage - paper request)
                         </Text>
                     </View>
                 </View>,
                 <View style={styles.bottomNav}>
                     <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                         <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
+                        <Text style={styles.homeText}>Home</Text>
                     </TouchableOpacity>
                 </View>
                 ]);
@@ -506,20 +506,20 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
                             <Text style={styles.stepNumber}>5</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepText}>/5 Step</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>이메일</Text>
-                            <Text style={styles.question}>이메일을 입력해주세요.</Text>
+                            <Text style={styles.inquirytitle}>Email</Text>
+                            <Text style={styles.question}>Please enter your email.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
                         <Text style={styles.assistantText}>
-                            이메일을 입력해주세요.{"\n"}
-                            (예: bct@bctone.kr)
+                            Please enter your email.{"\n"}
+                            (e.g., bct@bctone.kr)
                         </Text>
                     </View>
                 </View>,
@@ -527,7 +527,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 <View style={styles.bottomNav}>
                     <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                         <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
+                        <Text style={styles.homeText}>Home</Text>
                     </TouchableOpacity>
                 </View>
                 ]);
@@ -540,22 +540,22 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 }));
                 setSectionContent(prev => [...prev,
                 <View key={`message-${Date.now()}`} style={[styles.messageContainer, styles.botMessage,]}>
-                    <Text style={styles.inquirytitle}>📝문의가 접수되었습니다.</Text>
+                    <Text style={styles.inquirytitle}>📝 Inquiry has been submitted.</Text>
                     <View style={styles.messageSection}>
                         <Text style={styles.assistantText}>
-                            접수 정보 :{"\n"}
-                            • 작성자: {inquiryInfo.name}{"\n"}
-                            • 거래처: {inquiryInfo.group}{"\n"}
-                            • 연락처: {inquiryInfo.phone}{"\n"}
-                            • 이메일: {text}{"\n"}
-                            • 문의 내용: {inquiryInfo.detail}{"\n"}
+                            Submission Information:{"\n"}
+                            • Name: {inquiryInfo.name}{"\n"}
+                            • Company: {inquiryInfo.group}{"\n"}
+                            • Contact: {inquiryInfo.phone}{"\n"}
+                            • Email: {text}{"\n"}
+                            • Inquiry Details: {inquiryInfo.detail}{"\n"}
                             {"\n"}
-                            귀하의 문의사항이 정상적으로 접수되었습니다.{"\n"}
-                            담당자가 확인 후 영업일 기준 1-2일 내에 연락드리겠습니다.{"\n"}
+                            Your inquiry has been successfully submitted.{"\n"}
+                            Our team will contact you within 1-2 business days after review.{"\n"}
                             {"\n"}
-                            긴급한 사항인 경우 1588-1234로 직접 연락주시기 바랍니다.{"\n"}
+                            For urgent matters, please contact us directly at 1588-1234.{"\n"}
                             {"\n"}
-                            감사합니다! 🙏
+                            Thank you! 🙏
                         </Text>
                     </View>
                 </View>
@@ -563,10 +563,10 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 setSectionContent(prev => [
                     ...prev,
                     <View style={styles.feedbackForm} key={`inquiry-${Date.now()}`}>
-                        <Text style={styles.titleText}>잠깐만요!</Text>
+                        <Text style={styles.titleText}>Wait a moment!</Text>
                         <Text style={styles.feedbackText}>
-                            오늘 상담이 도움이 되셨나요?{"\n"}
-                            여러분의 소중한 의견을 들려주세요.
+                            Was today's consultation helpful?{"\n"}
+                            Please share your valuable feedback.
                         </Text>
 
                         <View style={styles.feedbackButtonContainer}>
@@ -574,21 +574,21 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                                 style={[styles.feedbackButton, styles.reviewButton]}
                                 onPress={() => handleReview("helpful")}
                             >
-                                <Text style={styles.buttonText}>👍 네, 도움이 되었어요</Text>
+                                <Text style={styles.buttonText}>👍 Yes, it was helpful</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 style={[styles.feedbackButton, styles.reviewButton]}
                                 onPress={() => handleReview("not_helpful")}
                             >
-                                <Text style={styles.buttonText}>👎 아니요, 더 개선이 필요해요</Text>
+                                <Text style={styles.buttonText}>👎 No, needs improvement</Text>
                             </TouchableOpacity>
                         </View>
                     </View>,
                     <View style={styles.bottomNav}>
                         <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
                             <Icon name="home" size={20} color="#333" />
-                            <Text style={styles.homeText}>처음으로</Text>
+                            <Text style={styles.homeText}>Home</Text>
                         </TouchableOpacity>
                     </View>
                 ]);
@@ -610,7 +610,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             //     console.log(err);
             // });
             const data = await requestAssistantAnswer(text);
-            const answer = data.answer?.trim?.() ? data.answer.trim() : "응답을 가져올 수 없습니다.";
+            const answer = data.answer?.trim?.() ? data.answer.trim() : "Unable to retrieve response.";
             const assistantComponent = (
                 <View key={`message-${Date.now()}`} style={[styles.messageContainer, styles.botMessage,]}>
                     <Text style={[
@@ -626,15 +626,15 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
 
 
-    /** 🟦 2. STT 시작 */
+    /** 🟦 2. Start STT */
     const startSTT = async () => {
-        console.log("🎤 STT 시작");
+        console.log("🎤 Starting STT");
 
         if (!audioRecorderPlayer.current) {
             audioRecorderPlayer.current = new AudioRecorderPlayer();
         }
 
-        /** 권한 요청 */
+        /** Request permissions */
         if (Platform.OS === "android") {
             const granted = await PermissionsAndroid.requestMultiple([
                 PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
@@ -642,35 +642,35 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             ]);
 
             if (granted["android.permission.RECORD_AUDIO"] !== "granted") {
-                Alert.alert("마이크 권한이 필요합니다.");
+                Alert.alert("Microphone permission is required.");
                 return;
             }
         }
 
         try {
-            // 🟦 Android는 앱 내부 저장소 경로 사용
+            // 🟦 Android uses app internal storage path
             const path = Platform.OS === "android"
                 ? `${RNFS.DocumentDirectoryPath}/${Date.now()}_record.mp4`
                 : "record.m4a";
 
             const uri = await audioRecorderPlayer.current.startRecorder(path, {
-                meteringEnabled: true,   // 중요!
+                meteringEnabled: true,   // Important!
             });
 
             recordingPathRef.current = uri;
 
-            console.log("녹음 시작:", uri);
+            console.log("Recording started:", uri);
 
             // monitorSilence();
 
         } catch (error) {
-            console.error("녹음 시작 오류:", error);
-            Alert.alert("녹음을 시작할 수 없습니다.");
+            console.error("Recording start error:", error);
+            Alert.alert("Unable to start recording.");
         }
     };
 
 
-    /** 🟦 3. 무음 감지 */
+    /** 🟦 3. Silence detection */
     const monitorSilence = () => {
         if (!audioRecorderPlayer.current) return;
 
@@ -693,51 +693,51 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         });
     };
 
-    /** 🟦 4. STT 종료 + 서버 업로드 */
+    /** 🟦 4. Stop STT + Upload to server */
     const stopSTT = async () => {
-        console.log("🛑 STT 종료");
+        console.log("🛑 Stopping STT");
 
         if (!audioRecorderPlayer.current) return;
 
         try {
-            // 1) 리스너 제거
+            // 1) Remove listener
             if (recordBackListener.current) {
                 audioRecorderPlayer.current.removeRecordBackListener();
                 recordBackListener.current = null;
             }
 
-            // 2) 무음 타이머 제거
+            // 2) Remove silence timer
             if (silenceTimer.current) {
                 clearTimeout(silenceTimer.current);
                 silenceTimer.current = null;
             }
 
-            // 3) 녹음 중지
+            // 3) Stop recording
             let uri = await audioRecorderPlayer.current.stopRecorder();
 
-            // 4) Android → stopRecorder()가 빈 문자열 반환하는 경우 fallback
+            // 4) Android → fallback if stopRecorder() returns empty string
             if (!uri || uri.trim() === "") {
                 uri = recordingPathRef.current;
             }
 
-            // 5) iOS는 파일 생성 지연 문제 해결
+            // 5) iOS file creation delay fix
             await new Promise(res => setTimeout(res, 150));
 
-            // 6) 서버 업로드
+            // 6) Upload to server
             uploadToServer(uri);
 
         } catch (error) {
-            console.error("녹음 종료 오류:", error);
-            Alert.alert("녹음을 종료할 수 없습니다.");
+            console.error("Recording stop error:", error);
+            Alert.alert("Unable to stop recording.");
         }
     };
 
 
-    /** 🟦 5. 서버에 보내고 → ChatSection에서 UI 업데이트 */
+    /** 🟦 5. Send to server → Update UI in ChatSection */
     const uploadToServer = async (uri: string) => {
         try {
             if (!uri) {
-                Alert.alert("녹음 파일이 없습니다.");
+                Alert.alert("Recording file not found.");
                 return;
             }
 
@@ -747,15 +747,15 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             const mimeType = Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4';
 
             formData.append("file", {
-                uri: uri,                  // Android: RNFS 경로 그대로, iOS: 상대경로 가능
+                uri: uri,                  // Android: RNFS path as is, iOS: relative path possible
                 type: mimeType,
                 name: `record.${fileExtension}`,
             } as any);
 
             formData.append("lang", "Kor");
 
-            // 서버 URL: 모바일에서 접근 가능한 IP 혹은 도메인 사용
-            const apiUrl = REACT_APP_API_URL; // 예: "http://192.168.x.x:8000"
+            // Server URL: Use IP or domain accessible from mobile
+            const apiUrl = REACT_APP_API_URL; // e.g., "http://192.168.x.x:8000"
 
             const res = await fetch(`${apiUrl}/llm/clova_stt`, {
                 method: "POST",
@@ -763,8 +763,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             });
 
             if (!res.ok) {
-                console.error("서버 응답 오류:", res.status, await res.text());
-                Alert.alert("서버 처리 중 오류가 발생했습니다.");
+                console.error("Server response error:", res.status, await res.text());
+                Alert.alert("An error occurred while processing on the server.");
                 return;
             }
 
@@ -789,7 +789,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             ]);
 
             const STTdata = await requestAssistantAnswer(data.text);
-            const answer = STTdata.answer?.trim?.() ? STTdata.answer.trim() : "응답을 가져올 수 없습니다.";
+            const answer = STTdata.answer?.trim?.() ? STTdata.answer.trim() : "Unable to retrieve response.";
             const assistantComponent = (
                 <View key={`message-${Date.now()}`} style={[styles.messageContainer, styles.botMessage,]}>
                     <Text style={[
@@ -804,8 +804,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
 
         } catch (error) {
-            console.error('서버 업로드 오류:', error);
-            Alert.alert("음성 인식 처리 중 오류가 발생했습니다.");
+            console.error('Server upload error:', error);
+            Alert.alert("An error occurred while processing speech recognition.");
         }
     };
 
@@ -834,7 +834,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             <Text style={styles.desc}>{systemSettings.welcome_message}</Text>
 
             {sectionContent.map((content, i) => {
-                // ReactElement인 경우 key를 추출, 아니면 인덱스 사용
+                // Extract key if ReactElement, otherwise use index
                 const key = React.isValidElement(content) && content.key
                     ? content.key
                     : `content-${i}`;
@@ -868,7 +868,7 @@ async function parseError(response: Response) {
             const text = await response.clone().text();
             return text || fallback;
         } catch {
-            return fallback || "요청 처리에 실패했습니다.";
+            return fallback || "Failed to process request.";
         }
     }
 }
@@ -934,7 +934,7 @@ const styles = StyleSheet.create({
         fontSize: 32, // 2rem ≒ 32px
         fontStyle: 'normal',
         fontWeight: '600',
-        lineHeight: 32, // 'normal'은 보통 fontSize와 동일하게 맞춥니다
+        lineHeight: 32, // 'normal' is usually the same as fontSize
     },
 
     messageContainer: {
