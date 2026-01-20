@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, ScrollView, Text, Alert, TouchableOpacity, Platform, PermissionsAndroid } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Alert, TouchableOpacity, Platform, PermissionsAndroid, Image } from 'react-native';
 import axios from 'axios';
 import { REACT_APP_API_URL } from '@env';
 import MaskedView from '@react-native-masked-view/masked-view';
@@ -9,6 +9,7 @@ import SubMenuForm from './SubMenuForm';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from "react-native-fs";
+import { launchImageLibrary, ImagePickerResponse, Asset } from 'react-native-image-picker';
 
 interface Category {
     id: number;
@@ -24,7 +25,7 @@ interface FAQ {
 }
 
 export interface ChatSectionRef {
-    handleSendMessage: (text: string, isUser?: boolean) => void;
+    handleSendMessage: (text: string, isUser?: boolean, forceInquiry?: boolean) => void;
     startSTT: () => void;
     stopSTT: () => void;
 }
@@ -49,9 +50,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     const [topK, setTopK] = useState(5);
     const [knowledgeId, setKnowledgeId] = useState("");
     const [inquiryInfo, setInquiryInfo] = useState({
-        name: "",
-        email: "",
-        group: "",
+        category: "",
+        businessNumber: "",
+        companyName: "",
         phone: "",
         detail: "",
     });
@@ -61,6 +62,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     const recordingPathRef = useRef<string | null>(null);
     const silenceTimer = useRef<NodeJS.Timeout | null>(null);
     const recordBackListener = useRef<any>(null);
+    const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
+    const [filePreviews, setFilePreviews] = useState<any[]>([]);
 
     const SILENCE_THRESHOLD = 0.01;
     const SILENCE_TIMEOUT = 2000;
@@ -145,18 +148,114 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         });
     }
 
-    const createInquiry = (email: string) => {
-        axios.post(`${REACT_APP_API_URL}/inquiries/`, {
-            customer_name: inquiryInfo.name,
-            email: email,
-            company: inquiryInfo.group,
-            phone: inquiryInfo.phone,
-            content: inquiryInfo.detail,
-            status: "new",
-            assignee_admin_id: 0,
-        }).then((res) => {
-            console.log(res.data);
-        });
+    const createInquiry = async (detail: string, filesToUpload: any[] = []) => {
+        try {
+            console.log('문의 정보:', {
+                business_name: inquiryInfo.companyName,
+                business_number: inquiryInfo.businessNumber,
+                phone: inquiryInfo.phone,
+                content: detail,
+                inquiry_type: inquiryInfo.category,
+                files_count: selectedFiles.length
+            });
+
+            // selectedFiles 확인
+            console.log('selectedFiles 전체:', JSON.stringify(selectedFiles, null, 2));
+
+            const formData = new FormData();
+            formData.append("business_name", inquiryInfo.companyName || "");
+            formData.append("business_number", inquiryInfo.businessNumber || "");
+            formData.append("phone", inquiryInfo.phone || "");
+            formData.append("content", detail || "");
+            formData.append("inquiry_type", inquiryInfo.category || "");
+
+            // 파일 추가 - filesToUpload 파라미터 사용 (없으면 selectedFiles 사용)
+            const files = filesToUpload.length > 0 ? filesToUpload : selectedFiles;
+            
+            if (files && files.length > 0) {
+                console.log(`파일 ${files.length}개 추가 시작`);
+                
+                files.forEach((file, index) => {
+                    console.log(`파일 ${index + 1} 원본 정보:`, {
+                        uri: file.uri,
+                        type: file.type,
+                        fileName: file.fileName,
+                        fileSize: file.fileSize
+                    });
+
+                    // react-native-image-picker는 이미 올바른 URI 형식을 반환함
+                    // Android: content:// 또는 file://
+                    // iOS: file:// 또는 ph://
+                    let fileUri = file.uri;
+                    
+                    // Android에서 content:// URI는 그대로 사용
+                    // iOS에서 ph:// URI는 file://로 변환 필요할 수 있음
+                    if (Platform.OS === 'ios' && fileUri.startsWith('ph://')) {
+                        // ph:// URI는 그대로 사용 (react-native-image-picker가 처리)
+                        console.log('iOS ph:// URI 사용');
+                    }
+
+                    // MIME 타입 확인
+                    let mimeType = file.type || 'image/jpeg';
+                    if (!mimeType || mimeType === '' || mimeType === 'image') {
+                        // 파일명 확장자로부터 MIME 타입 추정
+                        const ext = file.fileName?.split('.').pop()?.toLowerCase();
+                        if (ext === 'png') mimeType = 'image/png';
+                        else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+                        else if (ext === 'gif') mimeType = 'image/gif';
+                        else mimeType = 'image/jpeg';
+                    }
+
+                    // 파일명 생성
+                    const fileName = file.fileName || `image_${Date.now()}_${index}.jpg`;
+
+                    // React Native FormData 형식
+                    const fileObject = {
+                        uri: fileUri,
+                        type: mimeType,
+                        name: fileName,
+                    };
+
+                    console.log(`파일 ${index + 1} FormData 객체:`, fileObject);
+
+                    formData.append("files", fileObject as any);
+                });
+                
+                console.log('모든 파일 추가 완료');
+            } else {
+                console.log('추가할 파일이 없습니다');
+            }
+
+            console.log('FormData 전송 시작');
+
+            const response = await fetch(`${REACT_APP_API_URL}/inquiries/`, {
+                method: "POST",
+                body: formData,
+                // FormData 사용 시 Content-Type을 명시하지 않음 (브라우저가 자동으로 설정)
+            });
+
+            console.log('응답 상태:', response.status, response.statusText);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('서버 응답 오류:', errorText);
+                
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    console.error('오류 상세:', errorJson);
+                    Alert.alert('오류', errorJson.detail || errorJson.message || '문의 접수 실패');
+                } catch {
+                    Alert.alert('오류', errorText || '문의 접수 실패');
+                }
+                return;
+            }
+
+            const result = await response.json();
+            console.log('문의 접수 성공:', result);
+        } catch (error: any) {
+            console.error('문의 접수 오류:', error);
+            Alert.alert('오류', error.message || '문의 접수 중 오류가 발생했습니다.');
+        }
     }
 
     const getSystemSettings = () => {
@@ -166,6 +265,98 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             console.error(err);
         });
     }
+
+    // 파일 선택 핸들러
+    const handleFilePick = async () => {
+        const currentCount = filePreviews.length;
+        if (currentCount >= 3) {
+            Alert.alert('알림', '파일은 최대 3개까지 선택할 수 있습니다.');
+            return;
+        }
+
+        // Android 권한 체크
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+                    {
+                        title: '이미지 접근 권한',
+                        message: '이미지를 선택하기 위해 저장소 접근 권한이 필요합니다.',
+                        buttonNeutral: '나중에',
+                        buttonNegative: '취소',
+                        buttonPositive: '확인',
+                    }
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                    Alert.alert('권한 필요', '이미지를 선택하려면 저장소 접근 권한이 필요합니다.');
+                    return;
+                }
+            } catch (err) {
+                console.warn(err);
+            }
+        }
+
+        launchImageLibrary(
+            {
+                mediaType: 'photo',
+                quality: 0.8,
+                selectionLimit: 3 - currentCount, // 남은 개수만큼만 선택 가능
+            },
+            (response: ImagePickerResponse) => {
+                if (response.didCancel) {
+                    return;
+                }
+
+                if (response.errorMessage) {
+                    Alert.alert('오류', response.errorMessage);
+                    return;
+                }
+
+                if (response.assets && response.assets.length > 0) {
+                    console.log('선택된 파일 assets:', response.assets);
+                    
+                    const newFiles = response.assets.map((asset: Asset, idx: number) => {
+                        const fileData = {
+                            uri: asset.uri || '',
+                            type: asset.type || 'image/jpeg',
+                            fileName: asset.fileName || `image_${Date.now()}_${idx}.jpg`,
+                            fileSize: asset.fileSize || 0,
+                        };
+                        console.log(`파일 ${idx + 1} 매핑:`, fileData);
+                        return fileData;
+                    });
+
+                    const totalCount = filePreviews.length + newFiles.length;
+                    if (totalCount > 3) {
+                        Alert.alert('알림', '파일은 최대 3개까지 선택할 수 있습니다.');
+                        return;
+                    }
+
+                    console.log('새 파일 추가 전 - selectedFiles:', selectedFiles.length, 'filePreviews:', filePreviews.length);
+                    console.log('추가할 새 파일:', newFiles);
+
+                    setSelectedFiles(prev => {
+                        const updated = [...prev, ...newFiles];
+                        console.log('selectedFiles 업데이트 후:', updated.length);
+                        return updated;
+                    });
+                    setFilePreviews(prev => {
+                        const updated = [...prev, ...newFiles];
+                        console.log('filePreviews 업데이트 후:', updated.length);
+                        return updated;
+                    });
+                } else {
+                    console.log('선택된 파일이 없습니다');
+                }
+            }
+        );
+    };
+
+    // 파일 삭제 핸들러
+    const handleFileRemove = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+        setFilePreviews(prev => prev.filter((_, i) => i !== index));
+    };
 
     const getCategory = () => {
         axios.get(`${REACT_APP_API_URL}/system/quick-categories`).then((res) => {
@@ -225,38 +416,69 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         setInquiryStatus(true);
         setInquiryStep(0);
         setSectionContent(prev => [...prev,
-        <View style={styles.inquiryForm} key={`message-${Date.now()}`}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.stepContainer}>
-                    <Text style={styles.stepNumber}>1</Text>
-                    <Text style={styles.stepText}>/5 단계</Text>
-                </View>
 
-                <View style={styles.headerTextContainer}>
-                    <Text style={styles.inquirytitle}>문의 정보 수집</Text>
-                    <Text style={styles.question}>성함을 알려주세요</Text>
+        <View style={styles.container_inquiry}>
+            <View style={styles.underline_inquiry} />
+
+            <View style={styles.submenuWrap_inquiry}>
+                <Text style={styles.submenuTitle_inquiry}>문의하기</Text>
+                <Text style={styles.submenuDesc_inquiry}>번호를 입력하거나 클릭하여 카테고리를 선택하세요.</Text>
+
+                <TouchableOpacity
+                    style={styles.submenuItem_inquiry}
+                    onPress={() => {
+                        handleSendMessage("1", true, true);
+                    }}
+                >
+                    <View style={styles.submenuId_inquiry}>
+                        <Text style={styles.submenuIdText_inquiry}>1</Text>
+                    </View>
+                    <View style={styles.submenuContent_inquiry}>
+                        <Text style={styles.submenuQuestion_inquiry}>용지 요청</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.submenuItem_inquiry}
+                >
+                    <View style={styles.submenuId_inquiry}>
+                        <Text style={styles.submenuIdText_inquiry}>2</Text>
+                    </View>
+                    <View style={styles.submenuContent_inquiry}>
+                        <Text style={styles.submenuQuestion_inquiry}>매출 내역</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.submenuItem_inquiry}
+                >
+                    <View style={styles.submenuId_inquiry}>
+                        <Text style={styles.submenuIdText_inquiry}>3</Text>
+                    </View>
+                    <View style={styles.submenuContent_inquiry}>
+                        <Text style={styles.submenuQuestion_inquiry}>메뉴 수정 및 추가</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.submenuItem_inquiry}
+                >
+                    <View style={styles.submenuId_inquiry}>
+                        <Text style={styles.submenuIdText_inquiry}>4</Text>
+                    </View>
+                    <View style={styles.submenuContent_inquiry}>
+                        <Text style={styles.submenuQuestion_inquiry}>기타</Text>
+                    </View>
+                </TouchableOpacity>
+
+
+                <View style={styles.bottomNav_inquiry}>
+                    <TouchableOpacity style={styles.backButton_inquiry} onPress={getFirstMenu}>
+                        <Icon name="arrow-back" size={18} color="#007AFF" style={styles.backIcon_inquiry} />
+                        <Text style={styles.backText_inquiry}>이전 메뉴 보기</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
-
-            {/* Message Section */}
-            <View style={styles.messageSection}>
-                <Text style={styles.subTitle}>문의하기 시작</Text>
-
-                <Text style={styles.assistantText}>
-                    안녕하세요! 문의사항을 접수해드리겠습니다.{"\n"}
-                    빠른 처리를 위해 몇 가지 정보를 수집하겠습니다.
-                </Text>
-
-                <Text style={styles.assistantBold}>첫 번째로, 성함을 알려주세요.</Text>
-                <Text style={styles.assistantText}>(예: 홍길동)</Text>
-            </View>
-        </View>,
-        <View style={styles.bottomNav}>
-            <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
-                <Icon name="home" size={20} color="#333" />
-                <Text style={styles.homeText}>처음으로</Text>
-            </TouchableOpacity>
         </View>
         ]);
     }
@@ -265,12 +487,15 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         setInquiryStatus(false);
         setInquiryStep(0);
         setInquiryInfo({
-            name: "",
-            email: "",
-            group: "",
+            category: "",
+            businessNumber: "",
+            companyName: "",
             phone: "",
             detail: "",
         });
+        // 파일 상태 초기화
+        setSelectedFiles([]);
+        setFilePreviews([]);
         // 첫 메뉴로 돌아가기
         setSectionContent(prev => [
             ...prev,
@@ -287,9 +512,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         setInquiryStatus(false);
         setInquiryStep(0);
         setInquiryInfo({
-            name: "",
-            email: "",
-            group: "",
+            category: "",
+            businessNumber: "",
+            companyName: "",
             phone: "",
             detail: "",
         });
@@ -356,7 +581,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     }, [topK, knowledgeId, newSession]);
 
 
-    const handleSendMessage = React.useCallback(async (text: string, isUser: boolean = true) => {
+    const handleSendMessage = React.useCallback(async (text: string, isUser: boolean = true, forceInquiry: boolean = false) => {
         if (!text.trim()) return;
         const messageComponent = (
             <View
@@ -376,11 +601,34 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         );
         setSectionContent(prev => [...prev, messageComponent]);
 
-        if (inquiryStatus === true) {
-            if (inquiryStep === 0) {
+        // forceInquiry가 true이면 강제로 inquiry 모드로 처리
+        const shouldUseInquiry = forceInquiry || inquiryStatus === true;
+
+        if (shouldUseInquiry) {
+            if (forceInquiry && !inquiryStatus) {
+                setInquiryStatus(true);
+            }
+            if (forceInquiry && inquiryStep !== 0) {
+                setInquiryStep(0);
+            }
+
+            const currentStep = forceInquiry ? 0 : inquiryStep;
+
+            if (currentStep === 0) {
+                let category = "";
+                if (text === "1") {
+                    category = "paper_request";
+                } else if (text === "2") {
+                    category = "sales_report";
+                } else if (text === "3") {
+                    category = "kiosk_menu_update";
+                } else if (text === "4") {
+                    category = "other";
+                }
+
                 setInquiryInfo((prev: any) => ({
                     ...prev,
-                    name: text
+                    category: category
                 }));
 
                 setSectionContent(prev => [...prev,
@@ -388,25 +636,29 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>2</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepNumber}>1</Text>
+                            <Text style={styles.stepText}>/4 단계</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>회사 정보 수집</Text>
-                            <Text style={styles.question}>회사명을 알려주세요.</Text>
+                            <Text style={styles.inquirytitle}>문의 정보 수집</Text>
+                            <Text style={styles.question}>사업자번호를 입력해주세요.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
-                        <Text style={styles.subTitle}>{text}님, 안녕하세요!</Text>
-
                         <Text style={styles.assistantText}>
-                            두 번째로, 거래처(회사명)을 알려주세요.{"\n"}
-                            개인 문의인 경우 "개인"이라고 입력해주세요.{"\n"}
-                            (예: 가람포스텍, 개인)
+                            안녕하세요! 문의사항을 접수해드리겠습니다.{"\n"}
+                            빠른 처리를 위해 몇 가지 정보를 수집하겠습니다.
                         </Text>
+                        <Text style={styles.subTitle}>
+                            첫 번째로, 사업자번호를 입력하세요.
+                        </Text>
+                        <Text style={styles.assistantText}>
+                            (예: 1234567890)
+                        </Text>
+
                     </View>
                 </View>,
                 <View style={styles.bottomNav}>
@@ -417,10 +669,10 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 </View>
                 ]);
                 setInquiryStep(1);
-            } else if (inquiryStep === 1) {
+            } else if (currentStep === 1) {
                 setInquiryInfo((prev: any) => ({
                     ...prev,
-                    group: text
+                    businessNumber: text
                 }));
 
                 setSectionContent(prev => [...prev,
@@ -428,22 +680,23 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>3</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepNumber}>2</Text>
+                            <Text style={styles.stepText}>/4 단계</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>연락처</Text>
-                            <Text style={styles.question}>연락처를 기입해주세요.</Text>
+                            <Text style={styles.inquirytitle}>상호명</Text>
+                            <Text style={styles.question}>상호명을 입력해주세요.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
+                        <Text style={styles.subTitle}>
+                            두 번째로, 상호명을 입력하세요.
+                        </Text>
                         <Text style={styles.assistantText}>
-                            세 번째로, 연락처를 기입해주세요.{"\n"}
-                            빠른 처리를 위해 필요합니다.{"\n"}
-                            (예: 010-1234-5678)
+                            (예: 가람포스텍)
                         </Text>
                     </View>
                 </View>,
@@ -455,10 +708,10 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 </View>
                 ]);
                 setInquiryStep(2);
-            } else if (inquiryStep === 2) {
+            } else if (currentStep === 2) {
                 setInquiryInfo((prev: any) => ({
                     ...prev,
-                    phone: text
+                    companyName: text
                 }));
 
                 setSectionContent(prev => [...prev,
@@ -466,22 +719,23 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>4</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepNumber}>3</Text>
+                            <Text style={styles.stepText}>/4 단계</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>문의 내용</Text>
-                            <Text style={styles.question}>문의내용을 입력해주세요.</Text>
+                            <Text style={styles.inquirytitle}>전화번호</Text>
+                            <Text style={styles.question}>전화번호를 입력해주세요.</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
+                        <Text style={styles.subTitle}>
+                            세 번째로, 전화번호를 입력하세요.
+                        </Text>
                         <Text style={styles.assistantText}>
-                            구체적인 문의 내용을 알려주세요.{"\n"}
-                            자세히 설명해주실수록 더 정확한 지원이 가능합니다.{"\n"}
-                            (예: 카드리더기 오류로 결제가 안됩니다, POS 용지 부족으로 용지 요청드립니다)
+                            (예: 010-1234-5678)
                         </Text>
                     </View>
                 </View>,
@@ -494,10 +748,10 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 ]);
 
                 setInquiryStep(3);
-            } else if (inquiryStep === 3) {
+            } else if (currentStep === 3) {
                 setInquiryInfo((prev: any) => ({
                     ...prev,
-                    detail: text
+                    phone: text
                 }));
 
                 setSectionContent(prev => [...prev,
@@ -505,22 +759,56 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>5</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
+                            <Text style={styles.stepNumber}>4</Text>
+                            <Text style={styles.stepText}>/4 단계</Text>
                         </View>
 
                         <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>이메일</Text>
-                            <Text style={styles.question}>이메일을 입력해주세요.</Text>
+                            <Text style={styles.inquirytitle}>문의내용</Text>
+                            <Text style={styles.question}>문의내용을 입력해주세요</Text>
                         </View>
                     </View>
 
                     {/* Message Section */}
                     <View style={styles.messageSection}>
-                        <Text style={styles.assistantText}>
-                            이메일을 입력해주세요.{"\n"}
-                            (예: bct@bctone.kr)
+                        <Text style={styles.subTitle}>
+                            마지막으로, 문의내용을 입력하세요
                         </Text>
+                        <Text style={styles.assistantText}>
+                            (예: 카드리더기 오류로 결제가 안됩니다, POS 용지 부족으로 용지 요청드립니다)
+                        </Text>
+
+                        {/* 파일 선택 버튼 */}
+                        <TouchableOpacity 
+                            style={styles.fileSelectButton} 
+                            onPress={handleFilePick}
+                            disabled={filePreviews.length >= 3}
+                        >
+                            <Icon name="attach-file" size={20} color="#007AFF" />
+                            <Text style={styles.fileSelectText}>
+                                사진 첨부 ({filePreviews.length}/3)
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* 파일 미리보기 */}
+                        {filePreviews.length > 0 && (
+                            <View style={styles.filePreviewContainer}>
+                                {filePreviews.map((preview, index) => (
+                                    <View key={index} style={styles.filePreviewItem}>
+                                        <Image 
+                                            source={{ uri: preview.uri }} 
+                                            style={styles.filePreviewImage}
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.fileRemoveButton}
+                                            onPress={() => handleFileRemove(index)}
+                                        >
+                                            <Icon name="close" size={16} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
                     </View>
                 </View>,
 
@@ -532,23 +820,36 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 </View>
                 ]);
                 setInquiryStep(4);
-            } else if (inquiryStep === 4) {
-                createInquiry(text);
+            } else if (currentStep === 4) {
                 setInquiryInfo((prev: any) => ({
                     ...prev,
-                    email: text
+                    detail: text
                 }));
+                
+                // selectedFiles 상태가 최신인지 확인하기 위해 약간의 지연
+                // 또는 직접 filePreviews를 사용 (동기적으로 접근 가능)
+                console.log('문의 제출 시점 - selectedFiles:', selectedFiles.length, 'filePreviews:', filePreviews.length);
+                
+                // filePreviews를 사용하여 파일 정보 가져오기 (더 안정적)
+                const filesToUpload = filePreviews.length > 0 ? filePreviews : selectedFiles;
+                console.log('업로드할 파일:', filesToUpload);
+                
+                await createInquiry(text, filesToUpload);
                 setSectionContent(prev => [...prev,
                 <View key={`message-${Date.now()}`} style={[styles.messageContainer, styles.botMessage,]}>
                     <Text style={styles.inquirytitle}>📝문의가 접수되었습니다.</Text>
                     <View style={styles.messageSection}>
                         <Text style={styles.assistantText}>
                             접수 정보 :{"\n"}
-                            • 작성자: {inquiryInfo.name}{"\n"}
-                            • 거래처: {inquiryInfo.group}{"\n"}
+                            • 사업자번호: {inquiryInfo.businessNumber}{"\n"}
+                            • 상호명: {inquiryInfo.companyName}{"\n"}
                             • 연락처: {inquiryInfo.phone}{"\n"}
-                            • 이메일: {text}{"\n"}
-                            • 문의 내용: {inquiryInfo.detail}{"\n"}
+                            • 문의 내용: {text}{"\n"}
+                            {filePreviews.length > 0 && (
+                                <>
+                                    • 첨부파일: {filePreviews.length}개{"\n"}
+                                </>
+                            )}
                             {"\n"}
                             귀하의 문의사항이 정상적으로 접수되었습니다.{"\n"}
                             담당자가 확인 후 영업일 기준 1-2일 내에 연락드리겠습니다.{"\n"}
@@ -595,6 +896,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
                 setInquiryStep(0);
                 setInquiryStatus(false);
+                // 파일 초기화
+                setSelectedFiles([]);
+                setFilePreviews([]);
             }
         } else {
             const start = performance.now();
@@ -1057,6 +1361,141 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#333",
     },
+    container_inquiry: {
+        marginVertical: 16,
+    },
+    underline_inquiry: {
+        height: 1,
+        backgroundColor: '#e0e0e0',
+        marginBottom: 16,
+    },
+    submenuWrap_inquiry: {
+        padding: 16,
+    },
+    submenuTitle_inquiry: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 12,
+    },
+    submenuDesc_inquiry: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 16,
+    },
+    emptyText_inquiry: {
+        fontSize: 14,
+        color: '#999',
+        marginBottom: 16,
+        textAlign: 'center',
+        paddingVertical: 20,
+    },
+    submenuItem_inquiry: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f9f9f9',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    submenuId_inquiry: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#007AFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    submenuIdText_inquiry: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    submenuContent_inquiry: {
+        flex: 1,
+    },
+    submenuQuestion_inquiry: {
+        fontSize: 15,
+        color: '#333',
+        fontWeight: '500',
+    },
+    bottomNav_inquiry: {
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
+    },
+    backButton_inquiry: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+    },
+    backIcon_inquiry: {
+        marginRight: 6,
+    },
+    backText_inquiry: {
+        fontSize: 14,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    fileSelectButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f0f0',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        marginTop: 16,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        borderStyle: 'dashed',
+    },
+    fileSelectText: {
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    filePreviewContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 12,
+        gap: 8,
+    },
+    filePreviewItem: {
+        position: 'relative',
+        width: 80,
+        height: 80,
+        marginRight: 8,
+        marginBottom: 8,
+    },
+    filePreviewImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 8,
+        resizeMode: 'cover',
+    },
+    fileRemoveButton: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#ff4444',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+
 });
 
 export default ChatSection;
