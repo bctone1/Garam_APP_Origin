@@ -64,6 +64,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
     const recordBackListener = useRef<any>(null);
     const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
     const [filePreviews, setFilePreviews] = useState<any[]>([]);
+    const inquiryDetailRenderKeyRef = useRef<string>('inquiry-detail-form');
+    const filePreviewsRef = useRef<any[]>([]);
+    const selectedFilesRef = useRef<any[]>([]);
 
     const SILENCE_THRESHOLD = 0.01;
     const SILENCE_TIMEOUT = 2000;
@@ -105,7 +108,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 </View>
             ]);
             hasRunRef.current = true;
-        }, 9000);
+        }, 20000);
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
@@ -150,17 +153,26 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
     const createInquiry = async (detail: string, filesToUpload: any[] = []) => {
         try {
+            // filesToUpload 파라미터 확인
+            console.log('createInquiry 호출 - filesToUpload:', filesToUpload.length, '개');
+            console.log('filesToUpload 상세:', JSON.stringify(filesToUpload, null, 2));
+            
+            // ref를 사용하여 최신 파일 상태 확인
+            const currentFilePreviews = filePreviewsRef.current;
+            const currentSelectedFiles = selectedFilesRef.current;
+            console.log('ref - selectedFiles:', currentSelectedFiles.length, '개');
+            console.log('ref - filePreviews:', currentFilePreviews.length, '개');
+
             console.log('문의 정보:', {
                 business_name: inquiryInfo.companyName,
                 business_number: inquiryInfo.businessNumber,
                 phone: inquiryInfo.phone,
                 content: detail,
                 inquiry_type: inquiryInfo.category,
-                files_count: selectedFiles.length
+                filesToUpload_count: filesToUpload.length,
+                ref_filePreviews_count: currentFilePreviews.length,
+                ref_selectedFiles_count: currentSelectedFiles.length
             });
-
-            // selectedFiles 확인
-            console.log('selectedFiles 전체:', JSON.stringify(selectedFiles, null, 2));
 
             const formData = new FormData();
             formData.append("business_name", inquiryInfo.companyName || "");
@@ -169,11 +181,24 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
             formData.append("content", detail || "");
             formData.append("inquiry_type", inquiryInfo.category || "");
 
-            // 파일 추가 - filesToUpload 파라미터 사용 (없으면 selectedFiles 사용)
-            const files = filesToUpload.length > 0 ? filesToUpload : selectedFiles;
+            // 파일 추가 - 우선순위: filesToUpload > ref filePreviews > ref selectedFiles
+            let files: any[] = [];
+            if (filesToUpload && filesToUpload.length > 0) {
+                files = filesToUpload;
+                console.log('filesToUpload 사용:', files.length, '개');
+            } else if (currentFilePreviews && currentFilePreviews.length > 0) {
+                files = currentFilePreviews;
+                console.log('ref filePreviews 사용:', files.length, '개');
+            } else if (currentSelectedFiles && currentSelectedFiles.length > 0) {
+                files = currentSelectedFiles;
+                console.log('ref selectedFiles 사용:', files.length, '개');
+            }
+            
+            console.log('최종 사용할 파일 배열:', files.length, '개');
             
             if (files && files.length > 0) {
                 console.log(`파일 ${files.length}개 추가 시작`);
+                console.log('파일 목록:', JSON.stringify(files, null, 2));
                 
                 files.forEach((file, index) => {
                     console.log(`파일 ${index + 1} 원본 정보:`, {
@@ -188,6 +213,11 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     // iOS: file:// 또는 ph://
                     let fileUri = file.uri;
                     
+                    if (!fileUri) {
+                        console.error(`파일 ${index + 1}: URI가 없습니다`);
+                        return;
+                    }
+
                     // Android에서 content:// URI는 그대로 사용
                     // iOS에서 ph:// URI는 file://로 변환 필요할 수 있음
                     if (Platform.OS === 'ios' && fileUri.startsWith('ph://')) {
@@ -209,29 +239,54 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     // 파일명 생성
                     const fileName = file.fileName || `image_${Date.now()}_${index}.jpg`;
 
-                    // React Native FormData 형식
-                    const fileObject = {
+                    // React Native FormData 형식 - 정확한 구조로 생성
+                    // React Native에서는 uri, type, name 속성이 필요함
+                    // 주의: name 속성은 필수이며, 파일명을 포함해야 함
+                    const fileObject: any = {
                         uri: fileUri,
                         type: mimeType,
                         name: fileName,
                     };
 
-                    console.log(`파일 ${index + 1} FormData 객체:`, fileObject);
+                    console.log(`파일 ${index + 1} FormData 객체:`, {
+                        uri: fileObject.uri,
+                        type: fileObject.type,
+                        name: fileObject.name
+                    });
 
-                    formData.append("files", fileObject as any);
+                    // FormData에 파일 추가 - React Native에서는 이 형식이 필요함
+                    // 여러 파일을 추가할 때는 각각 개별적으로 추가
+                    // 백엔드에서 "files" 필드명으로 받는지 확인 필요
+                    formData.append("files", fileObject);
                 });
                 
-                console.log('모든 파일 추가 완료');
+                    console.log('모든 파일 추가 완료');
+                console.log(`FormData에 ${files.length}개 파일 추가됨`);
             } else {
                 console.log('추가할 파일이 없습니다');
+                console.warn('경고: 파일이 선택되지 않았거나 전달되지 않았습니다.');
+                console.warn('filesToUpload:', filesToUpload.length, 'filePreviews:', filePreviews.length, 'selectedFiles:', selectedFiles.length);
             }
 
             console.log('FormData 전송 시작');
+            console.log('FormData 내용 확인:', {
+                business_name: inquiryInfo.companyName,
+                business_number: inquiryInfo.businessNumber,
+                phone: inquiryInfo.phone,
+                content: detail,
+                inquiry_type: inquiryInfo.category,
+                files_count: files.length || 0,
+                files_added: files.length > 0
+            });
 
             const response = await fetch(`${REACT_APP_API_URL}/inquiries/`, {
                 method: "POST",
                 body: formData,
-                // FormData 사용 시 Content-Type을 명시하지 않음 (브라우저가 자동으로 설정)
+                headers: {
+                    // FormData 사용 시 Content-Type을 명시적으로 설정하지 않음
+                    // React Native가 자동으로 multipart/form-data로 설정함
+                    'Accept': 'application/json',
+                },
             });
 
             console.log('응답 상태:', response.status, response.statusText);
@@ -266,6 +321,87 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         });
     }
 
+    const buildInquiryDetailStepContent = (previews: any[]) => {
+        return (
+            <View key={inquiryDetailRenderKeyRef.current}>
+                <View style={styles.inquiryForm}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.stepContainer}>
+                            <Text style={styles.stepNumber}>4</Text>
+                            <Text style={styles.stepText}>/4 단계</Text>
+                        </View>
+
+                        <View style={styles.headerTextContainer}>
+                            <Text style={styles.inquirytitle}>문의내용</Text>
+                            <Text style={styles.question}>문의내용을 입력해주세요</Text>
+                        </View>
+                    </View>
+
+                    {/* Message Section */}
+                    <View style={styles.messageSection}>
+                        <Text style={styles.subTitle}>
+                            마지막으로, 문의내용을 입력하세요
+                        </Text>
+                        <Text style={styles.assistantText}>
+                            (예: 카드리더기 오류로 결제가 안됩니다, POS 용지 부족으로 용지 요청드립니다)
+                        </Text>
+
+                        {/* 파일 선택 버튼 */}
+                        <TouchableOpacity
+                            style={styles.fileSelectButton}
+                            onPress={handleFilePick}
+                            disabled={previews.length >= 3}
+                        >
+                            <Icon name="attach-file" size={20} color="#007AFF" />
+                            <Text style={styles.fileSelectText}>
+                                사진 첨부 ({previews.length}/3)
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* 파일 미리보기 */}
+                        {previews.length > 0 && (
+                            <View style={styles.filePreviewContainer}>
+                                {previews.map((preview, index) => (
+                                    <View key={index} style={styles.filePreviewItem}>
+                                        <Image
+                                            source={{ uri: preview.uri }}
+                                            style={styles.filePreviewImage}
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.fileRemoveButton}
+                                            onPress={() => handleFileRemove(index)}
+                                        >
+                                            <Icon name="close" size={16} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                <View style={styles.bottomNav}>
+                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                        <Icon name="home" size={20} color="#333" />
+                        <Text style={styles.homeText}>처음으로</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
+    const replaceInquiryDetailStepContent = (previews: any[]) => {
+        setSectionContent(prev =>
+            prev.map(item => {
+                if (React.isValidElement(item) && item.key === inquiryDetailRenderKeyRef.current) {
+                    return buildInquiryDetailStepContent(previews);
+                }
+                return item;
+            })
+        );
+    };
+
     // 파일 선택 핸들러
     const handleFilePick = async () => {
         const currentCount = filePreviews.length;
@@ -277,8 +413,13 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         // Android 권한 체크
         if (Platform.OS === 'android') {
             try {
+                const permission =
+                    (Platform.Version as number) >= 33
+                        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+                        : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+
                 const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+                    permission,
                     {
                         title: '이미지 접근 권한',
                         message: '이미지를 선택하기 위해 저장소 접근 권한이 필요합니다.',
@@ -338,11 +479,14 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     setSelectedFiles(prev => {
                         const updated = [...prev, ...newFiles];
                         console.log('selectedFiles 업데이트 후:', updated.length);
+                        selectedFilesRef.current = updated;
                         return updated;
                     });
                     setFilePreviews(prev => {
                         const updated = [...prev, ...newFiles];
                         console.log('filePreviews 업데이트 후:', updated.length);
+                        filePreviewsRef.current = updated;
+                        replaceInquiryDetailStepContent(updated);
                         return updated;
                     });
                 } else {
@@ -354,8 +498,17 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
     // 파일 삭제 핸들러
     const handleFileRemove = (index: number) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-        setFilePreviews(prev => prev.filter((_, i) => i !== index));
+        setSelectedFiles(prev => {
+            const updated = prev.filter((_, i) => i !== index);
+            selectedFilesRef.current = updated;
+            return updated;
+        });
+        setFilePreviews(prev => {
+            const updated = prev.filter((_, i) => i !== index);
+            filePreviewsRef.current = updated;
+            replaceInquiryDetailStepContent(updated);
+            return updated;
+        });
     };
 
     const getCategory = () => {
@@ -440,6 +593,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
                 <TouchableOpacity
                     style={styles.submenuItem_inquiry}
+                    onPress={() => {
+                        handleSendMessage("2", true, true);
+                    }}
                 >
                     <View style={styles.submenuId_inquiry}>
                         <Text style={styles.submenuIdText_inquiry}>2</Text>
@@ -451,6 +607,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
                 <TouchableOpacity
                     style={styles.submenuItem_inquiry}
+                    onPress={() => {
+                        handleSendMessage("3", true, true);
+                    }}
                 >
                     <View style={styles.submenuId_inquiry}>
                         <Text style={styles.submenuIdText_inquiry}>3</Text>
@@ -462,6 +621,9 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
 
                 <TouchableOpacity
                     style={styles.submenuItem_inquiry}
+                    onPress={() => {
+                        handleSendMessage("4", true, true);
+                    }}
                 >
                     <View style={styles.submenuId_inquiry}>
                         <Text style={styles.submenuIdText_inquiry}>4</Text>
@@ -496,6 +658,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
         // 파일 상태 초기화
         setSelectedFiles([]);
         setFilePreviews([]);
+        selectedFilesRef.current = [];
+        filePreviewsRef.current = [];
         // 첫 메뉴로 돌아가기
         setSectionContent(prev => [
             ...prev,
@@ -754,71 +918,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     phone: text
                 }));
 
-                setSectionContent(prev => [...prev,
-                <View style={styles.inquiryForm} key={`message-${Date.now()}`}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>4</Text>
-                            <Text style={styles.stepText}>/4 단계</Text>
-                        </View>
-
-                        <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>문의내용</Text>
-                            <Text style={styles.question}>문의내용을 입력해주세요</Text>
-                        </View>
-                    </View>
-
-                    {/* Message Section */}
-                    <View style={styles.messageSection}>
-                        <Text style={styles.subTitle}>
-                            마지막으로, 문의내용을 입력하세요
-                        </Text>
-                        <Text style={styles.assistantText}>
-                            (예: 카드리더기 오류로 결제가 안됩니다, POS 용지 부족으로 용지 요청드립니다)
-                        </Text>
-
-                        {/* 파일 선택 버튼 */}
-                        <TouchableOpacity 
-                            style={styles.fileSelectButton} 
-                            onPress={handleFilePick}
-                            disabled={filePreviews.length >= 3}
-                        >
-                            <Icon name="attach-file" size={20} color="#007AFF" />
-                            <Text style={styles.fileSelectText}>
-                                사진 첨부 ({filePreviews.length}/3)
-                            </Text>
-                        </TouchableOpacity>
-
-                        {/* 파일 미리보기 */}
-                        {filePreviews.length > 0 && (
-                            <View style={styles.filePreviewContainer}>
-                                {filePreviews.map((preview, index) => (
-                                    <View key={index} style={styles.filePreviewItem}>
-                                        <Image 
-                                            source={{ uri: preview.uri }} 
-                                            style={styles.filePreviewImage}
-                                        />
-                                        <TouchableOpacity
-                                            style={styles.fileRemoveButton}
-                                            onPress={() => handleFileRemove(index)}
-                                        >
-                                            <Icon name="close" size={16} color="#fff" />
-                                        </TouchableOpacity>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                </View>,
-
-                <View style={styles.bottomNav}>
-                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
-                        <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
-                    </TouchableOpacity>
-                </View>
-                ]);
+                setSectionContent(prev => [...prev, buildInquiryDetailStepContent(filePreviews)]);
                 setInquiryStep(4);
             } else if (currentStep === 4) {
                 setInquiryInfo((prev: any) => ({
@@ -826,12 +926,13 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                     detail: text
                 }));
                 
-                // selectedFiles 상태가 최신인지 확인하기 위해 약간의 지연
-                // 또는 직접 filePreviews를 사용 (동기적으로 접근 가능)
-                console.log('문의 제출 시점 - selectedFiles:', selectedFiles.length, 'filePreviews:', filePreviews.length);
+                // ref를 사용하여 최신 파일 상태 가져오기 (클로저 문제 해결)
+                const currentFilePreviews = filePreviewsRef.current;
+                const currentSelectedFiles = selectedFilesRef.current;
+                console.log('문의 제출 시점 - selectedFiles:', currentSelectedFiles.length, 'filePreviews:', currentFilePreviews.length);
                 
                 // filePreviews를 사용하여 파일 정보 가져오기 (더 안정적)
-                const filesToUpload = filePreviews.length > 0 ? filePreviews : selectedFiles;
+                const filesToUpload = currentFilePreviews.length > 0 ? currentFilePreviews : currentSelectedFiles;
                 console.log('업로드할 파일:', filesToUpload);
                 
                 await createInquiry(text, filesToUpload);
@@ -899,6 +1000,8 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 // 파일 초기화
                 setSelectedFiles([]);
                 setFilePreviews([]);
+                selectedFilesRef.current = [];
+                filePreviewsRef.current = [];
             }
         } else {
             const start = performance.now();
