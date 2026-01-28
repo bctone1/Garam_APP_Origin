@@ -669,6 +669,7 @@ const ChatSection = forwardRef<ChatSectionRef>(({ }, ref) => {
                 onSelectCategory={getSubmenu}
                 onInquiry={onInquiry}
                 onFAQ={loadFAQList}
+                handleSendMessage={handleSendMessage}
             />
         ]);
     };

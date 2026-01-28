@@ -13,13 +13,15 @@ interface MenuFormProps {
   onSelectCategory: (category: Category) => void;
   onInquiry: () => void;
   onFAQ: () => void;
+  handleSendMessage: (message: string, isUser?: boolean, forceInquiry?: boolean) => void;
 }
 
-export default function MenuForm({ categories, onSelectCategory, onInquiry, onFAQ }: MenuFormProps) {
+export default function MenuForm({ categories, onSelectCategory, onInquiry, onFAQ,handleSendMessage }: MenuFormProps) {
   return (
     <View style={styles.container}>
       <View style={styles.buttonGrid}>
-        <TouchableOpacity style={styles.button} onPress={onInquiry}>
+
+        {/* <TouchableOpacity style={styles.button} onPress={onInquiry}>
           <View style={styles.buttonContent}>
             <View style={styles.iconContainer}>
               <Text style={styles.iconText}>💬</Text>
@@ -29,7 +31,59 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
               <Text style={styles.descText}>직접 상담 및 지원 요청</Text>
             </View>
           </View>
+        </TouchableOpacity> */}
+
+        <TouchableOpacity style={styles.button} 
+        onPress={() => {
+                        handleSendMessage("1", true, true);
+                    }}
+                    >
+          <View style={styles.buttonContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>💬</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.titleText}>용지 요청</Text>
+              <Text style={styles.descText}>용지 요청</Text>
+            </View>
+          </View>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} 
+        onPress={() => {
+                        handleSendMessage("2", true, true);
+                    }}
+                    >
+          <View style={styles.buttonContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>💬</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.titleText}>매출 내역</Text>
+              <Text style={styles.descText}>매출 내역</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} 
+        onPress={() => {
+                        handleSendMessage("3", true, true);
+                    }}
+                    >
+          <View style={styles.buttonContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>💬</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.titleText}>메뉴 수정 및 추가</Text>
+              <Text style={styles.descText}>메뉴 수정 및 추가</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+
+
+
 
         <TouchableOpacity style={styles.button} onPress={onFAQ}>
           <View style={styles.buttonContent}>
