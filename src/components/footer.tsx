@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     TextInput,
@@ -11,12 +11,28 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 interface FooterProps {
     onSend?: (message: string) => void;
     onSTT?: (isActive: boolean) => void;
+    streamingText?: string;
+    isStreamingActive?: boolean;
 }
 
-export default function Footer({ onSend, onSTT }: FooterProps) {
+export default function Footer({ onSend, onSTT, streamingText, isStreamingActive }: FooterProps) {
     const [messageInput, setMessageInput] = useState<string>('');
     const [plusmenu, setPlusmenu] = useState<boolean>(false);
     const [micStatus, setMicStatus] = useState<boolean>(false);
+
+    // 🟩 스트리밍 STT 텍스트를 TextInput에 실시간 반영
+    useEffect(() => {
+        if (streamingText !== undefined && streamingText !== null) {
+            setMessageInput(streamingText);
+        }
+    }, [streamingText]);
+
+    // 🟩 스트리밍 STT 자동 종료 시 마이크 버튼 상태 리셋
+    useEffect(() => {
+        if (isStreamingActive === false && micStatus === true) {
+            setMicStatus(false);
+        }
+    }, [isStreamingActive]);
 
     const handleSend = () => {
         if (messageInput.trim()) {
@@ -35,7 +51,7 @@ export default function Footer({ onSend, onSTT }: FooterProps) {
             <View style={styles.inputBox}>
                 <TextInput
                     style={styles.inputMessage}
-                    placeholder="메시지를 입력하세요..."
+                    placeholder={isStreamingActive ? "듣고 있습니다..." : "메시지를 입력하세요..."}
                     placeholderTextColor="#999"
                     value={messageInput}
                     onChangeText={setMessageInput}
@@ -65,14 +81,14 @@ export default function Footer({ onSend, onSTT }: FooterProps) {
                             style={[
                                 styles.inputButton,
                                 styles.micButton,
-                                micStatus && styles.inputButtonActive,
+                                (micStatus || isStreamingActive) && styles.inputButtonActive,
                             ]}
                             onPress={handleSTT}
                         >
                             <Icon
                                 name="mic"
                                 size={20}
-                                color={micStatus ? '#fff' : '#333'}
+                                color={(micStatus || isStreamingActive) ? '#fff' : '#333'}
                             />
                         </TouchableOpacity>
                         <TouchableOpacity

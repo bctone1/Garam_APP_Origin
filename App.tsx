@@ -5,13 +5,14 @@
  * @format
  */
 
-import React, { useRef } from 'react';
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, useColorScheme, View, Alert } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, useColorScheme, View, Alert, Modal } from 'react-native';
 
 import { Colors, DebugInstructions, LearnMoreLinks, ReloadInstructions, } from 'react-native/Libraries/NewAppScreen';
 import Header from './src/components/header';
 import Footer from './src/components/footer';
 import ChatSection, { ChatSectionRef } from './src/components/chatsection';
+import SecureNumberPad from './src/components/SecureNumberPad';
 import { SafeAreaProvider, useSafeAreaInsets, } from 'react-native-safe-area-context';
 
 
@@ -28,27 +29,86 @@ function App(): React.JSX.Element {
 function AppContent() {
   const chatSectionRef = useRef<ChatSectionRef>(null);
 
+  // 🟩 스트리밍 STT 모드 전환 플래그 (true: 스트리밍, false: 기존 백엔드 STT)
+  const USE_STREAMING_STT = true;
+  const [streamingText, setStreamingText] = useState<string>('');
+  const [isStreamingActive, setIsStreamingActive] = useState<boolean>(false);
+  const [showSecureNumPad, setShowSecureNumPad] = useState<boolean>(false);
+
   //부모 컴포넌트에서 자식 컴포넌트의 handleSendMessage를 정의
   const handleSend = (message: string) => {
     chatSectionRef.current?.handleSendMessage(message, true);
   };
 
   const handleSTT = (isActive: boolean) => {
-    // Alert.alert('음성 인식', isActive ? '음성 인식 종료' : '음성 인식 시작');
-    if (!isActive) {
-      chatSectionRef.current?.startSTT();
+    if (USE_STREAMING_STT) {
+      // 🟩 스트리밍 STT 모드
+      if (!isActive) {
+        setIsStreamingActive(true);
+        setStreamingText('');
+        chatSectionRef.current?.startStreamingSTT();
+      } else {
+        setIsStreamingActive(false);
+        chatSectionRef.current?.stopStreamingSTT();
+      }
     } else {
-      chatSectionRef.current?.stopSTT();
+      // 🟦 기존 백엔드 STT 모드 (변경 없음)
+      if (!isActive) {
+        chatSectionRef.current?.startSTT();
+      } else {
+        chatSectionRef.current?.stopSTT();
+      }
     }
+  };
+
+  const handleStreamingResult = (text: string) => {
+    setStreamingText(text);
+  };
+
+  const handleStreamingEnd = () => {
+    setIsStreamingActive(false);
+  };
+
+  const handleSecureNumberConfirm = (businessNumber: string) => {
+    setShowSecureNumPad(false);
+    chatSectionRef.current?.handleSendMessage(businessNumber, true);
+  };
+
+  const handleSecureNumberCancel = () => {
+    setShowSecureNumPad(false);
+    chatSectionRef.current?.getFirstMenu();
   };
 
   return (
     <View style={styles.container}>
       <Header />
-      <ChatSection ref={chatSectionRef} />
+      <ChatSection
+        ref={chatSectionRef}
+        onStreamingSTTResult={handleStreamingResult}
+        onStreamingSTTEnd={handleStreamingEnd}
+        onRequestSecureNumPad={() => setShowSecureNumPad(true)}
+      />
 
       {/* 정의한 handleSend를 자식(Footer)에 전달 */}
-      <Footer onSend={handleSend} onSTT={handleSTT} />
+      <Footer
+        onSend={handleSend}
+        onSTT={handleSTT}
+        streamingText={streamingText}
+        isStreamingActive={isStreamingActive}
+      />
+
+      <Modal
+        visible={showSecureNumPad}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleSecureNumberCancel}
+      >
+        <SecureNumberPad
+          visible={showSecureNumPad}
+          onConfirm={handleSecureNumberConfirm}
+          onCancel={handleSecureNumberCancel}
+        />
+      </Modal>
     </View>
   );
 }

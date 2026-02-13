@@ -11,12 +11,11 @@ interface Category {
 interface MenuFormProps {
   categories: Category[];
   onSelectCategory: (category: Category) => void;
-  onInquiry: () => void;
+  onSelectInquiryCategory: (categoryType: string) => void;
   onFAQ: () => void;
-  handleSendMessage: (message: string, isUser?: boolean, forceInquiry?: boolean) => void;
 }
 
-export default function MenuForm({ categories, onSelectCategory, onInquiry, onFAQ,handleSendMessage }: MenuFormProps) {
+export default function MenuForm({ categories, onSelectCategory, onSelectInquiryCategory, onFAQ }: MenuFormProps) {
   return (
     <View style={styles.container}>
       <View style={styles.buttonGrid}>
@@ -33,14 +32,11 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
           </View>
         </TouchableOpacity> */}
 
-        <TouchableOpacity style={styles.button} 
-        onPress={() => {
-                        handleSendMessage("1", true, true);
-                    }}
-                    >
+        <TouchableOpacity style={styles.button}
+          onPress={() => onSelectInquiryCategory('paper_request')}>
           <View style={styles.buttonContent}>
             <View style={styles.iconContainer}>
-              <Text style={styles.iconText}>💬</Text>
+              <Text style={styles.iconText}>📄</Text>
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.titleText}>용지 요청</Text>
@@ -49,14 +45,11 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} 
-        onPress={() => {
-                        handleSendMessage("2", true, true);
-                    }}
-                    >
+        <TouchableOpacity style={styles.button}
+          onPress={() => onSelectInquiryCategory('sales_report')}>
           <View style={styles.buttonContent}>
             <View style={styles.iconContainer}>
-              <Text style={styles.iconText}>💬</Text>
+              <Text style={styles.iconText}>📊</Text>
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.titleText}>매출 내역</Text>
@@ -65,14 +58,11 @@ export default function MenuForm({ categories, onSelectCategory, onInquiry, onFA
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} 
-        onPress={() => {
-                        handleSendMessage("3", true, true);
-                    }}
-                    >
+        <TouchableOpacity style={styles.button}
+          onPress={() => onSelectInquiryCategory('kiosk_menu_update')}>
           <View style={styles.buttonContent}>
             <View style={styles.iconContainer}>
-              <Text style={styles.iconText}>💬</Text>
+              <Text style={styles.iconText}>📋</Text>
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.titleText}>메뉴 수정 및 추가</Text>
