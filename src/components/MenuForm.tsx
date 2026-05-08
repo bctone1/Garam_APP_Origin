@@ -13,9 +13,10 @@ interface MenuFormProps {
   onSelectCategory: (category: Category) => void;
   onSelectInquiryCategory: (categoryType: string) => void;
   onFAQ: () => void;
+  onNotice: () => void;
 }
 
-export default function MenuForm({ categories, onSelectCategory, onSelectInquiryCategory, onFAQ }: MenuFormProps) {
+export default function MenuForm({ categories, onSelectCategory, onSelectInquiryCategory, onFAQ, onNotice }: MenuFormProps) {
   return (
     <View style={styles.container}>
       <View style={styles.buttonGrid}>
@@ -74,6 +75,18 @@ export default function MenuForm({ categories, onSelectCategory, onSelectInquiry
 
 
 
+
+        <TouchableOpacity style={styles.button} onPress={onNotice}>
+          <View style={styles.buttonContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.iconText}>📢</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.titleText}>공지사항</Text>
+              <Text style={styles.descText}>최신 공지 확인</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.button} onPress={onFAQ}>
           <View style={styles.buttonContent}>

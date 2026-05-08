@@ -1,11 +1,19 @@
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, ScrollView, Text, Alert, TouchableOpacity, Platform, PermissionsAndroid, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Alert, TouchableOpacity, Platform, PermissionsAndroid, Image, Modal } from 'react-native';
 import axios from 'axios';
 import { REACT_APP_API_URL } from '@env';
 import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 import MenuForm from './MenuForm';
 import SubMenuForm from './SubMenuForm';
+import NoticePopup from './NoticePopup';
+import {
+    Notice,
+    getActiveNotices,
+    getDismissedMap,
+    dismissNoticeForToday,
+    previewNoticeText,
+} from '../utill/notice_storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from "react-native-fs";
@@ -77,6 +85,8 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
     const recordBackListener = useRef<any>(null);
     const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
     const [filePreviews, setFilePreviews] = useState<any[]>([]);
+    const [popupNotices, setPopupNotices] = useState<Notice[]>([]);
+    const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
     const inquiryDetailRenderKeyRef = useRef<string>('inquiry-detail-form');
     const filePreviewsRef = useRef<any[]>([]);
     const selectedFilesRef = useRef<any[]>([]);
@@ -773,6 +783,7 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
                 onSelectCategory={getSubmenu}
                 onSelectInquiryCategory={selectInquiryCategory}
                 onFAQ={loadFAQList}
+                onNotice={loadNoticeList}
             />
         ]);
     };
@@ -811,17 +822,124 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         });
     }
 
+    const showNoticeDetail = (n: Notice) => {
+        setSelectedNotice(n);
+    };
+
+    const handleDetailClose = () => {
+        setSelectedNotice(null);
+    };
+
+    const loadNoticeList = async () => {
+        setInquiryStatus(false);
+        setInquiryStep(0);
+        let list: Notice[] = [];
+        try {
+            list = await getActiveNotices();
+        } catch (err) {
+            console.error('공지 목록 로드 실패:', err);
+        }
+        const stamp = Date.now();
+        setSectionContent(prev => [
+            ...prev,
+            <View key={`notice-list-${stamp}`} style={styles.noticeListWrap}>
+                <Text style={styles.noticeListTitle}>공지사항</Text>
+                {list.length === 0 ? (
+                    <Text style={styles.noticeEmpty}>등록된 공지가 없습니다.</Text>
+                ) : (
+                    <>
+                        <Text style={styles.noticeListDesc}>클릭하여 자세한 내용을 확인하세요.</Text>
+                        {list.map((n, index) => (
+                            <TouchableOpacity
+                                key={n.id}
+                                style={styles.noticeItem}
+                                onPress={() => showNoticeDetail(n)}
+                            >
+                                <View style={styles.noticeItemId}>
+                                    <Text style={styles.noticeItemIdText}>{index + 1}</Text>
+                                </View>
+                                <View style={styles.noticeItemContent}>
+                                    <View style={styles.noticeItemTitleRow}>
+                                        {n.is_important && (
+                                            <View style={styles.noticeItemBadge}>
+                                                <Text style={styles.noticeItemBadgeText}>중요</Text>
+                                            </View>
+                                        )}
+                                        <Text style={styles.noticeItemTitle} numberOfLines={1}>
+                                            {n.title}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.noticeItemPreview} numberOfLines={2}>
+                                        {previewNoticeText(n.content, 80)}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </>
+                )}
+                <View style={[styles.bottomNav, { marginTop: 12 }]}>
+                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                        <Icon name="home" size={20} color="#333" />
+                        <Text style={styles.homeText}>처음으로</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        ]);
+    };
+
+    const loadPopupNotices = async () => {
+        try {
+            const list = await getActiveNotices(true);
+            const map = await getDismissedMap();
+            const today = new Date().toISOString().split('T')[0];
+            const pending = list.filter(n => map[String(n.id)] !== today);
+            setPopupNotices(pending);
+        } catch (err) {
+            console.error('공지 팝업 로드 실패:', err);
+        }
+    };
+
+    const handlePopupDismissToday = async (id: number) => {
+        await dismissNoticeForToday(id);
+        setPopupNotices(prev => prev.filter(x => x.id !== id));
+    };
+
+    const handlePopupClose = (id: number) => {
+        setPopupNotices(prev => prev.filter(x => x.id !== id));
+    };
+
 
     useEffect(() => {
         createSession();
         getCategory();
         getSystemSettings();
+        getFirstMenu();
+        loadPopupNotices();
     }, []);
 
     useEffect(() => {
-        if (categories.length > 0) {
-            getFirstMenu();
-        }
+        if (categories.length === 0) return;
+        setSectionContent(prev =>
+            prev.map(item => {
+                if (
+                    React.isValidElement(item) &&
+                    typeof item.key === 'string' &&
+                    item.key.startsWith('menu-')
+                ) {
+                    return (
+                        <MenuForm
+                            key={item.key}
+                            categories={categories}
+                            onSelectCategory={getSubmenu}
+                            onSelectInquiryCategory={selectInquiryCategory}
+                            onFAQ={loadFAQList}
+                            onNotice={loadNoticeList}
+                        />
+                    );
+                }
+                return item;
+            })
+        );
     }, [categories]);
 
     // AI 답변 요청 함수
@@ -1341,23 +1459,62 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
     }, [sectionContent]);
 
     return (
-        <ScrollView
-            ref={scrollViewRef}
-            style={styles.chatSection}
-            contentContainerStyle={styles.chatContent}
-        >
-            <Text style={styles.title}>{systemSettings.welcome_title}</Text>
-            <Text style={styles.desc}>{systemSettings.welcome_message}</Text>
+        <>
+            <ScrollView
+                ref={scrollViewRef}
+                style={styles.chatSection}
+                contentContainerStyle={styles.chatContent}
+            >
+                <Text style={styles.title}>{systemSettings.welcome_title}</Text>
+                <Text style={styles.desc}>{systemSettings.welcome_message}</Text>
 
-            {sectionContent.map((content, i) => {
-                // ReactElement인 경우 key를 추출, 아니면 인덱스 사용
-                const key = React.isValidElement(content) && content.key
-                    ? content.key
-                    : `content-${i}`;
-                return <View key={key}>{content}</View>;
-            })}
+                {sectionContent.map((content, i) => {
+                    // ReactElement인 경우 key를 추출, 아니면 인덱스 사용
+                    const key = React.isValidElement(content) && content.key
+                        ? content.key
+                        : `content-${i}`;
+                    return <View key={key}>{content}</View>;
+                })}
 
-        </ScrollView>
+            </ScrollView>
+
+            <Modal
+                visible={selectedNotice !== null || popupNotices.length > 0}
+                transparent
+                animationType="fade"
+                onRequestClose={() => {
+                    if (selectedNotice) {
+                        handleDetailClose();
+                    } else if (popupNotices.length > 0) {
+                        handlePopupClose(popupNotices[0].id);
+                    }
+                }}
+            >
+                <View style={styles.noticeBackdrop}>
+                    <ScrollView
+                        contentContainerStyle={styles.noticeStackContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {selectedNotice ? (
+                            <NoticePopup
+                                key={`detail-${selectedNotice.id}`}
+                                notice={selectedNotice}
+                                onClose={() => handleDetailClose()}
+                            />
+                        ) : (
+                            popupNotices.map(n => (
+                                <NoticePopup
+                                    key={n.id}
+                                    notice={n}
+                                    onDismissToday={handlePopupDismissToday}
+                                    onClose={handlePopupClose}
+                                />
+                            ))
+                        )}
+                    </ScrollView>
+                </View>
+            </Modal>
+        </>
     );
 });
 
@@ -1657,6 +1814,108 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 2,
         borderColor: '#fff',
+    },
+
+    noticeBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(17, 24, 39, 0.55)',
+        justifyContent: 'flex-start',
+        paddingTop: 54,
+    },
+    noticeStackContent: {
+        paddingBottom: 24,
+    },
+    noticeListWrap: {
+        paddingVertical: 12,
+    },
+    noticeListTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 6,
+    },
+    noticeListDesc: {
+        fontSize: 13,
+        color: '#4b5563',
+        marginBottom: 12,
+    },
+    noticeEmpty: {
+        fontSize: 14,
+        color: '#9ca3af',
+        textAlign: 'center',
+        paddingVertical: 24,
+    },
+    noticeItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f9fafb',
+        borderRadius: 6,
+        padding: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    noticeItemId: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: '#2563eb',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    noticeItemIdText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    noticeItemContent: {
+        flex: 1,
+    },
+    noticeItemTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 3,
+    },
+    noticeItemBadge: {
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginRight: 6,
+    },
+    noticeItemBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    noticeItemTitle: {
+        flex: 1,
+        fontSize: 14,
+        color: '#111827',
+        fontWeight: '600',
+    },
+    noticeItemPreview: {
+        fontSize: 12,
+        color: '#6b7280',
+        lineHeight: 17,
+    },
+    noticeBotMessage: {
+        maxWidth: '95%',
+        padding: 14,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 6,
+    },
+    noticeBotTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 8,
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e5e7eb',
     },
 
 });

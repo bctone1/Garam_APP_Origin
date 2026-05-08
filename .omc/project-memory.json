@@ -1,0 +1,265 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1778219022057,
+  "projectRoot": "C:\\Users\\dudql\\OneDrive\\Desktop\\Garam\\garam_origin_app",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": ">=18",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      },
+      {
+        "name": "Ruby",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "Gemfile"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "jest",
+        "version": "29.6.3",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "bundler",
+    "runtime": "Node.js 18"
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": "npm test",
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run start",
+    "scripts": {
+      "android": "react-native run-android",
+      "ios": "react-native run-ios",
+      "lint": "eslint .",
+      "start": "react-native start",
+      "test": "jest"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src",
+      "__tests__"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "android": {
+      "path": "android",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1778219022016,
+      "keyFiles": [
+        "build.gradle",
+        "gradle.properties",
+        "gradlew",
+        "gradlew.bat",
+        "link-assets-manifest.json"
+      ]
+    },
+    "ios": {
+      "path": "ios",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1778219022017,
+      "keyFiles": [
+        "link-assets-manifest.json",
+        "Podfile"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1778219022031,
+      "keyFiles": []
+    },
+    "__tests__": {
+      "path": "__tests__",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1778219022032,
+      "keyFiles": [
+        "App.test.tsx"
+      ]
+    },
+    "android\\app": {
+      "path": "android\\app",
+      "purpose": "Application code",
+      "fileCount": 3,
+      "lastAccessed": 1778219022033,
+      "keyFiles": [
+        "build.gradle",
+        "debug.keystore",
+        "proguard-rules.pro"
+      ]
+    },
+    "android\\build": {
+      "path": "android\\build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1778219022033,
+      "keyFiles": []
+    },
+    "src\\assets": {
+      "path": "src\\assets",
+      "purpose": "Static assets",
+      "fileCount": 0,
+      "lastAccessed": 1778219022034,
+      "keyFiles": []
+    },
+    "src\\components": {
+      "path": "src\\components",
+      "purpose": "UI components",
+      "fileCount": 6,
+      "lastAccessed": 1778219022034,
+      "keyFiles": [
+        "chatsection.tsx",
+        "footer.tsx",
+        "header.tsx"
+      ]
+    },
+    "src\\types": {
+      "path": "src\\types",
+      "purpose": "Type definitions",
+      "fileCount": 2,
+      "lastAccessed": 1778219022035,
+      "keyFiles": [
+        "env.d.ts",
+        "react-native-vector-icons.d.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\components\\chatsection.tsx",
+      "accessCount": 20,
+      "lastAccessed": 1778223631503,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\MenuForm.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1778222087568,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\NoticePopup.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1778223621169,
+      "type": "file"
+    },
+    {
+      "path": "android\\app\\src\\main\\AndroidManifest.xml",
+      "accessCount": 2,
+      "lastAccessed": 1778222811454,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1778221084657,
+      "type": "file"
+    },
+    {
+      "path": "index.js",
+      "accessCount": 1,
+      "lastAccessed": 1778221092019,
+      "type": "file"
+    },
+    {
+      "path": "App.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1778221098180,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\SubMenuForm.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1778221099095,
+      "type": "file"
+    },
+    {
+      "path": ".env",
+      "accessCount": 1,
+      "lastAccessed": 1778221104630,
+      "type": "file"
+    },
+    {
+      "path": "src\\types\\env.d.ts",
+      "accessCount": 1,
+      "lastAccessed": 1778221104896,
+      "type": "file"
+    },
+    {
+      "path": "babel.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1778221366803,
+      "type": "file"
+    },
+    {
+      "path": "metro.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1778221367159,
+      "type": "file"
+    },
+    {
+      "path": "react-native.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1778221367934,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\header.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1778221368357,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\footer.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1778221368762,
+      "type": "file"
+    },
+    {
+      "path": "src\\utill\\notice_storage.ts",
+      "accessCount": 1,
+      "lastAccessed": 1778221943968,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
