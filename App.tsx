@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, useColorScheme, View, Alert, Modal } from 'react-native';
 
 import { Colors, DebugInstructions, LearnMoreLinks, ReloadInstructions, } from 'react-native/Libraries/NewAppScreen';
@@ -13,7 +13,9 @@ import Header from './src/components/header';
 import Footer from './src/components/footer';
 import ChatSection, { ChatSectionRef } from './src/components/chatsection';
 import SecureNumberPad from './src/components/SecureNumberPad';
+import NoticeToast, { ToastData } from './src/components/NoticeToast';
 import { SafeAreaProvider, useSafeAreaInsets, } from 'react-native-safe-area-context';
+import { initPush, setPushDeepLinkHandler, setPushToastHandler } from './src/utill/push';
 
 
 function App(): React.JSX.Element {
@@ -34,6 +36,21 @@ function AppContent() {
   const [streamingText, setStreamingText] = useState<string>('');
   const [isStreamingActive, setIsStreamingActive] = useState<boolean>(false);
   const [showSecureNumPad, setShowSecureNumPad] = useState<boolean>(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  useEffect(() => {
+    setPushDeepLinkHandler((notice) => {
+      chatSectionRef.current?.openNoticeDetail(notice);
+    });
+    setPushToastHandler(({ title, body, onPress }) => {
+      setToast({ id: Date.now(), title, body, onPress });
+    });
+    initPush();
+    return () => {
+      setPushDeepLinkHandler(null);
+      setPushToastHandler(null);
+    };
+  }, []);
 
   //부모 컴포넌트에서 자식 컴포넌트의 handleSendMessage를 정의
   const handleSend = (message: string) => {
@@ -109,6 +126,8 @@ function AppContent() {
           onCancel={handleSecureNumberCancel}
         />
       </Modal>
+
+      <NoticeToast toast={toast} onDismiss={() => setToast(null)} />
     </View>
   );
 }

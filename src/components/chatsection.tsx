@@ -40,6 +40,7 @@ export interface ChatSectionRef {
     startStreamingSTT: () => void;
     stopStreamingSTT: () => void;
     getFirstMenu: () => void;
+    openNoticeDetail: (notice: Notice) => void;
 }
 
 interface ChatSectionProps {
@@ -1448,6 +1449,7 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         startStreamingSTT,
         stopStreamingSTT,
         getFirstMenu,
+        openNoticeDetail: (notice: Notice) => setSelectedNotice(notice),
     }), [handleSendMessage, startSTT, stopSTT, getFirstMenu]);
 
     useEffect(() => {

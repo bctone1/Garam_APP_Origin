@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "29727022558",
+    "project_id": "garam-pos",
+    "storage_bucket": "garam-pos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29727022558:android:49306f9a52b64d3a9b114f",
+        "android_client_info": {
+          "package_name": "com.garam_origin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2IXPJoJ_0vo6Ez17a57cy1FnTJ084H4Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
