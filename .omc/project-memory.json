@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1778462099605,
+  "lastScanned": 1780639487840,
   "projectRoot": "C:\\Users\\dudql\\OneDrive\\Desktop\\Garam\\garam_origin_app",
   "techStack": {
     "languages": [
@@ -82,7 +82,7 @@
       "path": "android",
       "purpose": null,
       "fileCount": 6,
-      "lastAccessed": 1778462099563,
+      "lastAccessed": 1780639487803,
       "keyFiles": [
         "build.gradle",
         "gradle.properties",
@@ -95,7 +95,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 2,
-      "lastAccessed": 1778462099565,
+      "lastAccessed": 1780639487805,
       "keyFiles": [
         "PUSH_NOTIFICATION.md",
         "PUSH_NOTIFICATION_FLOW.md"
@@ -105,7 +105,7 @@
       "path": "ios",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1778462099581,
+      "lastAccessed": 1780639487815,
       "keyFiles": [
         "link-assets-manifest.json",
         "Podfile"
@@ -115,14 +115,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1778462099582,
+      "lastAccessed": 1780639487816,
       "keyFiles": []
     },
     "__tests__": {
       "path": "__tests__",
       "purpose": "Test files",
       "fileCount": 1,
-      "lastAccessed": 1778462099582,
+      "lastAccessed": 1780639487816,
       "keyFiles": [
         "App.test.tsx"
       ]
@@ -131,7 +131,7 @@
       "path": "android\\app",
       "purpose": "Application code",
       "fileCount": 4,
-      "lastAccessed": 1778462099583,
+      "lastAccessed": 1780639487817,
       "keyFiles": [
         "build.gradle",
         "debug.keystore",
@@ -142,21 +142,21 @@
       "path": "android\\build",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1778462099583,
+      "lastAccessed": 1780639487817,
       "keyFiles": []
     },
     "src\\assets": {
       "path": "src\\assets",
       "purpose": "Static assets",
       "fileCount": 0,
-      "lastAccessed": 1778462099584,
+      "lastAccessed": 1780639487818,
       "keyFiles": []
     },
     "src\\components": {
       "path": "src\\components",
       "purpose": "UI components",
       "fileCount": 8,
-      "lastAccessed": 1778462099584,
+      "lastAccessed": 1780639487819,
       "keyFiles": [
         "chatsection.tsx",
         "footer.tsx",
@@ -167,7 +167,7 @@
       "path": "src\\types",
       "purpose": "Type definitions",
       "fileCount": 2,
-      "lastAccessed": 1778462099585,
+      "lastAccessed": 1780639487819,
       "keyFiles": [
         "env.d.ts",
         "react-native-vector-icons.d.ts"
@@ -176,57 +176,39 @@
   },
   "hotPaths": [
     {
-      "path": "",
-      "accessCount": 2,
-      "lastAccessed": 1778464788604,
-      "type": "directory"
-    },
-    {
-      "path": ".env",
-      "accessCount": 1,
-      "lastAccessed": 1778464782089,
+      "path": "src\\components\\chatsection.tsx",
+      "accessCount": 26,
+      "lastAccessed": 1780640985470,
       "type": "file"
     },
     {
-      "path": "package.json",
+      "path": "src\\components\\SecureNumberPad.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1780640074930,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\MenuForm.tsx",
       "accessCount": 1,
-      "lastAccessed": 1778464785566,
+      "lastAccessed": 1780639914982,
       "type": "file"
     },
     {
       "path": "App.tsx",
       "accessCount": 1,
-      "lastAccessed": 1778464785965,
+      "lastAccessed": 1780640028172,
       "type": "file"
     },
     {
-      "path": "android\\app\\src\\main\\AndroidManifest.xml",
+      "path": "src\\components\\BusinessRegisterForm.tsx",
       "accessCount": 1,
-      "lastAccessed": 1778464786735,
+      "lastAccessed": 1780640107458,
       "type": "file"
     },
     {
-      "path": "babel.config.js",
+      "path": "_tmp_edit.py",
       "accessCount": 1,
-      "lastAccessed": 1778464792025,
-      "type": "file"
-    },
-    {
-      "path": "src\\types\\env.d.ts",
-      "accessCount": 1,
-      "lastAccessed": 1778464792792,
-      "type": "file"
-    },
-    {
-      "path": "src\\utill\\push.ts",
-      "accessCount": 1,
-      "lastAccessed": 1778464793572,
-      "type": "file"
-    },
-    {
-      "path": "android\\app\\google-services.json",
-      "accessCount": 1,
-      "lastAccessed": 1778466018441,
+      "lastAccessed": 1780640924422,
       "type": "file"
     }
   ],

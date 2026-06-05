@@ -18,14 +18,8 @@ interface SecureNumberPadProps {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const KEY_SIZE = Math.min(64, (SCREEN_WIDTH - 80) / 3 - 12);
 
-const shuffleDigits = (): number[] => {
-    const arr = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-};
+// 항상 일관된 키패드 배치 (1~9 후 0, 일반 전화기와 동일)
+const FIXED_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
 const formatBusinessNumber = (raw: string): string => {
     const d = raw.slice(0, 10);
@@ -36,13 +30,12 @@ const formatBusinessNumber = (raw: string): string => {
 
 export default function SecureNumberPad({ visible, onConfirm, onCancel }: SecureNumberPadProps) {
     const [digits, setDigits] = useState('');
-    const [shuffledKeys, setShuffledKeys] = useState<number[]>(shuffleDigits());
+    const shuffledKeys = FIXED_KEYS;
 
     useEffect(() => {
         if (visible) {
             Keyboard.dismiss();
             setDigits('');
-            setShuffledKeys(shuffleDigits());
         }
     }, [visible]);
 

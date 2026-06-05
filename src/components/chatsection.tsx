@@ -7,6 +7,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import MenuForm from './MenuForm';
 import SubMenuForm from './SubMenuForm';
 import NoticePopup from './NoticePopup';
+import BusinessRegisterForm from './BusinessRegisterForm';
 import {
     Notice,
     getActiveNotices,
@@ -65,7 +66,8 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
     });
     const [sectionContent, setSectionContent] = useState<React.ReactNode[]>([]);
     const [inquiryStatus, setInquiryStatus] = useState(false);
-    const [inquiryStep, setInquiryStep] = useState(0);
+    // inquiryStep: 0(비활성) | 'business_number' | 'sales_period' | 'custom_period' | 'receive_method' | 'detail'
+    const [inquiryStep, setInquiryStep] = useState<number | string>(0);
     const [topK, setTopK] = useState(5);
     const [knowledgeId, setKnowledgeId] = useState("");
     const [inquiryInfo, setInquiryInfo] = useState({
@@ -91,6 +93,14 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
     const inquiryDetailRenderKeyRef = useRef<string>('inquiry-detail-form');
     const filePreviewsRef = useRef<any[]>([]);
     const selectedFilesRef = useRef<any[]>([]);
+    const isRegistrationRef = useRef<boolean>(false);
+    const confirmedStoreRef = useRef<any>(null);
+    // 직접입력(문의자 정보) 모달 상태
+    const [showRegisterForm, setShowRegisterForm] = useState(false);
+    // 등록 진입 경로: 'unregistered'(미등록 조회) | 'mismatch'(정보 불일치 '아니오')
+    const registerEntryRef = useRef<string | null>(null);
+    // 입력한 사업자번호 보관 (비동기 검색/모달 전달용)
+    const businessNumberRef = useRef<string>("");
 
     const SILENCE_THRESHOLD = 0.01;
     const SILENCE_TIMEOUT = 2000;
@@ -175,36 +185,56 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         });
     }
 
-    const createInquiry = async (detail: string, filesToUpload: any[] = []) => {
+    const createInquiry = async (detail: string, filesToUpload: any[] = [], overrideData?: any) => {
         try {
             // filesToUpload 파라미터 확인
             console.log('createInquiry 호출 - filesToUpload:', filesToUpload.length, '개');
             console.log('filesToUpload 상세:', JSON.stringify(filesToUpload, null, 2));
-            
+
             // ref를 사용하여 최신 파일 상태 확인
             const currentFilePreviews = filePreviewsRef.current;
             const currentSelectedFiles = selectedFilesRef.current;
             console.log('ref - selectedFiles:', currentSelectedFiles.length, '개');
             console.log('ref - filePreviews:', currentFilePreviews.length, '개');
 
+            const businessName = (overrideData && overrideData.companyName) || inquiryInfo.companyName || "";
+            const businessNumber = (overrideData && overrideData.businessNumber) || inquiryInfo.businessNumber || "";
+            const phone = (overrideData && overrideData.phone) || inquiryInfo.phone || "";
+            const inquiryType = (overrideData && overrideData.category) || inquiryInfo.category || categoryRef.current || "";
+
             console.log('문의 정보:', {
-                business_name: inquiryInfo.companyName,
-                business_number: inquiryInfo.businessNumber,
-                phone: inquiryInfo.phone,
+                business_name: businessName,
+                business_number: businessNumber,
+                phone: phone,
                 content: detail,
-                inquiry_type: inquiryInfo.category,
+                inquiry_type: inquiryType,
                 filesToUpload_count: filesToUpload.length,
                 ref_filePreviews_count: currentFilePreviews.length,
                 ref_selectedFiles_count: currentSelectedFiles.length
             });
 
             const formData = new FormData();
-            formData.append("business_name", inquiryInfo.companyName || "");
-            formData.append("business_number", inquiryInfo.businessNumber || "");
-            formData.append("phone", inquiryInfo.phone || "");
+            formData.append("business_name", businessName);
+            formData.append("business_number", businessNumber);
+            formData.append("phone", phone);
+
+            // 카테고리별 content 구성 (garam_frontend InquiryCreate와 동일)
+            let contentValue = "";
             const periodPrefix = salesPeriodRef.current ? `[${salesPeriodRef.current}] ` : "";
-            formData.append("content", periodPrefix + (detail || ""));
-            formData.append("inquiry_type", inquiryInfo.category || "");
+            if (overrideData && overrideData.contentOverride) {
+                // 직접입력(아니오/미등록) 경로: 상호명/전화번호/주소를 지정 형식으로 전송
+                contentValue = overrideData.contentOverride;
+            } else if (inquiryType === 'paper_request') {
+                const paperDetail = (overrideData && overrideData.detail) || detail || "";
+                contentValue = "용지 요청" + (paperDetail ? ` - ${paperDetail}` : "");
+            } else if (inquiryType === 'sales_report') {
+                const receiveMethod = (overrideData && overrideData.receiveMethod) || "";
+                contentValue = periodPrefix + "수신방법: " + receiveMethod;
+            } else {
+                contentValue = periodPrefix + (detail || "");
+            }
+            formData.append("content", contentValue);
+            formData.append("inquiry_type", inquiryType);
 
             // 파일 추가 - 우선순위: filesToUpload > ref filePreviews > ref selectedFiles
             let files: any[] = [];
@@ -346,17 +376,12 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         });
     }
 
-    const buildInquiryDetailStepContent = (previews: any[], totalSteps: number = 4, stepOffset: number = 0) => {
+    const buildInquiryDetailStepContent = (previews: any[]) => {
         return (
             <View key={inquiryDetailRenderKeyRef.current}>
                 <View style={styles.inquiryForm}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>{4 + stepOffset}</Text>
-                            <Text style={styles.stepText}>/{totalSteps} 단계</Text>
-                        </View>
-
                         <View style={styles.headerTextContainer}>
                             <Text style={styles.inquirytitle}>문의내용</Text>
                             <Text style={styles.question}>문의내용을 입력해주세요</Text>
@@ -417,15 +442,426 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
     };
 
     const replaceInquiryDetailStepContent = (previews: any[]) => {
-        const { totalSteps, stepOffset } = getStepInfo();
         setSectionContent(prev =>
             prev.map(item => {
                 if (React.isValidElement(item) && item.key === inquiryDetailRenderKeyRef.current) {
-                    return buildInquiryDetailStepContent(previews, totalSteps, stepOffset);
+                    return buildInquiryDetailStepContent(previews);
                 }
                 return item;
             })
         );
+    };
+
+    // 가맹점 확인 (예/아니오) - 카테고리별 표시 필드 구성 (garam_frontend confirm_store와 동일)
+    const showConfirmStoreStep = (storeData: any) => {
+        const category = categoryRef.current;
+        let rows: React.ReactNode;
+        if (category === 'paper_request') {
+            // 용지요청: 상호명, 전화번호, 주소
+            rows = (
+                <>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>상호명</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.companyName || '-'}</Text>
+                    </View>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>전화번호</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.phone || '-'}</Text>
+                    </View>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>주소</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.address || '-'}</Text>
+                    </View>
+                </>
+            );
+        } else if (category === 'sales_report') {
+            // 매출내역: 상호명, 전화번호, 대표자
+            rows = (
+                <>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>상호명</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.companyName || '-'}</Text>
+                    </View>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>전화번호</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.phone || '-'}</Text>
+                    </View>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>대표자</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.ownerName || '-'}</Text>
+                    </View>
+                </>
+            );
+        } else if (category === 'kiosk_menu_update') {
+            // 메뉴 수정 및 추가: 상호명, 전화번호
+            rows = (
+                <>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>상호명</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.companyName || '-'}</Text>
+                    </View>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>전화번호</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.phone || '-'}</Text>
+                    </View>
+                </>
+            );
+        } else {
+            // 기본: 상호명, 연락처
+            rows = (
+                <>
+                    <View style={styles.confirmStoreRow}>
+                        <Text style={styles.confirmStoreLabel}>상호명</Text>
+                        <Text style={styles.confirmStoreValue}>{storeData?.companyName || '-'}</Text>
+                    </View>
+                    {storeData?.phone ? (
+                        <View style={styles.confirmStoreRow}>
+                            <Text style={styles.confirmStoreLabel}>연락처</Text>
+                            <Text style={styles.confirmStoreValue}>{storeData.phone}</Text>
+                        </View>
+                    ) : null}
+                </>
+            );
+        }
+
+        setSectionContent(prev => [...prev,
+            <View style={styles.inquiryForm} key={`inquiry-confirm-store-${Date.now()}`}>
+                <View style={styles.header}>
+                    <View style={styles.headerTextContainer}>
+                        <Text style={styles.inquirytitle}>가맹점 확인</Text>
+                        <Text style={styles.question}>등록된 가맹점 정보를 확인했습니다.</Text>
+                    </View>
+                </View>
+                <View style={styles.messageSection}>
+                    <View style={styles.confirmStoreInfo}>
+                        {rows}
+                    </View>
+                    <Text style={styles.confirmStoreGuide}>위 내용이 맞으면 "예", 수정이 필요하면 "아니오"를 눌러주세요.</Text>
+                    <View style={styles.confirmStoreButtons}>
+                        <TouchableOpacity
+                            style={[styles.confirmButton, styles.confirmButtonYes]}
+                            onPress={() => handleStoreConfirm(true, storeData)}
+                        >
+                            <Text style={styles.confirmButtonYesText}>예</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.confirmButton, styles.confirmButtonNo]}
+                            onPress={() => handleStoreConfirm(false, storeData)}
+                        >
+                            <Text style={styles.confirmButtonNoText}>아니오</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>,
+            <View style={styles.bottomNav} key={`nav-confirm-store-${Date.now()}`}>
+                <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                    <Icon name="home" size={20} color="#333" />
+                    <Text style={styles.homeText}>처음으로</Text>
+                </TouchableOpacity>
+            </View>
+        ]);
+    };
+
+    // 자료 수신 방법 입력 (매출내역 전용)
+    const showReceiveMethodStep = () => {
+        setSectionContent(prev => [...prev,
+            <View style={styles.inquiryForm} key={`inquiry-receive-${Date.now()}`}>
+                <View style={styles.header}>
+                    <View style={styles.headerTextContainer}>
+                        <Text style={styles.inquirytitle}>자료 수신 방법</Text>
+                        <Text style={styles.question}>매출자료를 수령하실 팩스번호 또는 이메일 주소를 입력해주세요.</Text>
+                    </View>
+                </View>
+                <View style={styles.messageSection}>
+                    <Text style={styles.subTitle}>자료를 받으실 방법을 입력하세요.</Text>
+                    <Text style={styles.assistantText}>(예: 이메일 abc@example.com, 팩스 02-1234-5678)</Text>
+                    <Text style={styles.disclaimerText}>
+                        ※각 카드사/국세청에서 집계한 자료와 상이할 수 있으니 부가세 신고시 단순 참고 자료로만 활용하여 주시기 바랍니다.
+                    </Text>
+                </View>
+            </View>,
+            <View style={styles.bottomNav} key={`nav-receive-${Date.now()}`}>
+                <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                    <Icon name="home" size={20} color="#333" />
+                    <Text style={styles.homeText}>처음으로</Text>
+                </TouchableOpacity>
+            </View>
+        ]);
+        setInquiryStep('receive_method');
+    };
+
+    // 문의 내용 입력 (메뉴 수정 및 추가 / 기타)
+    const showDetailStep = () => {
+        inquiryDetailRenderKeyRef.current = `inquiry-detail-form-${Date.now()}`;
+        setSectionContent(prev => [...prev, buildInquiryDetailStepContent(filePreviewsRef.current)]);
+        setInquiryStep('detail');
+    };
+
+    // 문의 접수 확인 (네/아니오) - 메뉴 수정 외 일반 문의 경로
+    const showConfirmInquiryStep = (displayData: any) => {
+        const category = categoryRef.current;
+        setSectionContent(prev => [...prev,
+            <View style={styles.inquiryForm} key={`inquiry-confirm-final-${Date.now()}`}>
+                <View style={styles.header}>
+                    <View style={styles.headerTextContainer}>
+                        <Text style={styles.inquirytitle}>문의 접수 확인</Text>
+                        <Text style={styles.question}>아래 내용으로 문의를 접수하시겠습니까?</Text>
+                    </View>
+                </View>
+                <View style={styles.messageSection}>
+                    <View style={styles.confirmStoreInfo}>
+                        <View style={styles.confirmStoreRow}>
+                            <Text style={styles.confirmStoreLabel}>사업자번호</Text>
+                            <Text style={styles.confirmStoreValue}>{displayData?.businessNumber || ''}</Text>
+                        </View>
+                        <View style={styles.confirmStoreRow}>
+                            <Text style={styles.confirmStoreLabel}>상호명</Text>
+                            <Text style={styles.confirmStoreValue}>{displayData?.companyName || ''}</Text>
+                        </View>
+                        {displayData?.phone ? (
+                            <View style={styles.confirmStoreRow}>
+                                <Text style={styles.confirmStoreLabel}>연락처</Text>
+                                <Text style={styles.confirmStoreValue}>{displayData.phone}</Text>
+                            </View>
+                        ) : null}
+                        {displayData?.detail ? (
+                            <View style={styles.confirmStoreRow}>
+                                <Text style={styles.confirmStoreLabel}>문의 내용</Text>
+                                <Text style={styles.confirmStoreValue}>{displayData.detail}</Text>
+                            </View>
+                        ) : null}
+                    </View>
+                    <View style={styles.confirmStoreButtons}>
+                        <TouchableOpacity
+                            style={[styles.confirmButton, styles.confirmButtonYes]}
+                            onPress={() => handleInquiryConfirm(true, displayData)}
+                        >
+                            <Text style={styles.confirmButtonYesText}>네</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.confirmButton, styles.confirmButtonNo]}
+                            onPress={() => handleInquiryConfirm(false, displayData)}
+                        >
+                            <Text style={styles.confirmButtonNoText}>아니오</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>,
+            <View style={styles.bottomNav} key={`nav-confirm-final-${Date.now()}`}>
+                <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                    <Icon name="home" size={20} color="#333" />
+                    <Text style={styles.homeText}>처음으로</Text>
+                </TouchableOpacity>
+            </View>
+        ]);
+    };
+
+    // 문의 접수 완료 처리 (garam_frontend getinquiryform(6)와 동일)
+    // 완료 후 "잠깐만요" 피드백 카드는 표시하지 않고 "처음으로" 네비게이션만 노출한다.
+    const completeInquiry = async (displayData: any) => {
+        const category = displayData?.category || categoryRef.current;
+        const currentFilePreviews = filePreviewsRef.current;
+        const currentSelectedFiles = selectedFilesRef.current;
+        const filesToUpload = currentFilePreviews.length > 0 ? currentFilePreviews : currentSelectedFiles;
+
+        await createInquiry(displayData?.detail || "", filesToUpload, {
+            businessNumber: displayData?.businessNumber,
+            companyName: displayData?.companyName,
+            phone: displayData?.phone,
+            category,
+            detail: displayData?.detail,
+            receiveMethod: displayData?.receiveMethod,
+            contentOverride: displayData?.contentOverride,
+        });
+
+        // 완료 메시지 구성
+        let resultNode: React.ReactNode;
+        if (displayData?.completeMessage) {
+            resultNode = (
+                <View key={`result-${Date.now()}`} style={[styles.messageContainer, styles.botMessage]}>
+                    <Text style={[styles.messageText, styles.botMessageText]}>{displayData.completeMessage}</Text>
+                </View>
+            );
+        } else {
+            let msg = "접수 정보 :\n";
+            msg += `• 사업자번호: ${displayData?.businessNumber || ''}\n`;
+            msg += `• 상호명: ${displayData?.companyName || ''}\n`;
+            if (displayData?.phone) msg += `• 연락처: ${displayData.phone}\n`;
+            if (category === 'paper_request') {
+                msg += `• 요청 내용: 용지 요청${displayData?.detail ? ` - ${displayData.detail}` : ''}\n`;
+            } else if (category === 'kiosk_menu_update') {
+                msg += `• 수정 요청 내용: ${displayData?.detail || ''}\n`;
+            } else if (category === 'sales_report') {
+                if (salesPeriodRef.current) msg += `• 조회 기간: ${salesPeriodRef.current}\n`;
+                msg += `• 수신 방법: ${displayData?.receiveMethod || ''}\n`;
+            } else {
+                msg += `• 문의 내용: ${salesPeriodRef.current ? `[${salesPeriodRef.current}] ` : ''}${displayData?.detail || ''}\n`;
+            }
+            if (currentFilePreviews.length > 0) msg += `• 첨부파일: ${currentFilePreviews.length}개\n`;
+            msg += "\n";
+            if (category === 'paper_request') msg += "택배마감시간 이후 요청건은 다음날 발송됩니다.\n\n";
+            if (category === 'kiosk_menu_update') {
+                msg += "접수해주신 내용을 확인 후 작업 진행 예정이며, 완료 시 연락 드리겠습니다.\n";
+            } else {
+                msg += "귀하의 문의사항이 정상적으로 접수되었습니다.\n";
+                msg += "담당자가 확인 후 영업일 기준 1-2일 내에 연락드리겠습니다.\n";
+            }
+            msg += "\n긴급한 사항인 경우 1588-1234로 직접 연락주시기 바랍니다.\n\n감사합니다! 🙏";
+
+            resultNode = (
+                <View key={`result-${Date.now()}`} style={[styles.messageContainer, styles.botMessage]}>
+                    <Text style={styles.inquirytitle}>📝문의가 접수되었습니다.</Text>
+                    <View style={styles.messageSectionResult}>
+                        <Text style={styles.assistantText}>{msg}</Text>
+                    </View>
+                </View>
+            );
+        }
+
+        setSectionContent(prev => [...prev,
+            resultNode,
+            <View style={styles.bottomNav} key={`nav-done-${Date.now()}`}>
+                <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
+                    <Icon name="home" size={20} color="#333" />
+                    <Text style={styles.homeText}>처음으로</Text>
+                </TouchableOpacity>
+            </View>
+        ]);
+
+        setInquiryStep(0);
+        setInquiryStatus(false);
+        isRegistrationRef.current = false;
+        setSelectedFiles([]);
+        setFilePreviews([]);
+        selectedFilesRef.current = [];
+        filePreviewsRef.current = [];
+    };
+
+    // 가맹점 확인 응답 → 카테고리별 분기 (garam_frontend handleStoreConfirm과 동일)
+    const handleStoreConfirm = (confirmed: boolean, storeData: any) => {
+        setSectionContent(prev => [...prev,
+            <View key={`message-${Date.now()}`}
+                style={[styles.messageContainer, styles.userMessage]}>
+                <Text style={[styles.messageText, styles.userMessageText]}>
+                    {confirmed ? "예" : "아니오"}
+                </Text>
+            </View>
+        ]);
+
+        if (confirmed) {
+            confirmedStoreRef.current = storeData;
+            switch (categoryRef.current) {
+                case 'paper_request':
+                    // 정보 일치(예): 접수 확인/내용 입력 없이 바로 완료 처리
+                    completeInquiry({
+                        ...storeData,
+                        category: 'paper_request',
+                        completeMessage: "용지신청이 완료되었습니다. 오후 4시 이전 접수시 당일출고 오후 4시 이후 접수건은 다음날에 출고됩니다.",
+                    });
+                    break;
+                case 'sales_report':
+                    // 조회기간 선택 단계로 진행
+                    showSalesPeriodStep();
+                    break;
+                case 'kiosk_menu_update':
+                    showDetailStep();
+                    break;
+                default:
+                    showDetailStep();
+                    break;
+            }
+        } else {
+            // "아니오" = 정보 불일치 → 직접입력 모달 표시
+            registerEntryRef.current = 'mismatch';
+            confirmedStoreRef.current = null;
+            isRegistrationRef.current = true;
+            setShowRegisterForm(true);
+        }
+    };
+
+    // 직접입력(문의자 정보) 모달 제출 - 사업장 등록(customer POST)은 하지 않고,
+    // 입력 정보를 문의하기 POST에만 사용한다. (garam_frontend handleRegisterSubmit과 동일)
+    const handleRegisterSubmit = (formData: any) => {
+        setShowRegisterForm(false);
+        confirmedStoreRef.current = {
+            businessNumber: formData.businessNumber,
+            companyName: formData.companyName,
+            phone: formData.phone,
+            address: formData.address,
+        };
+        setInquiryInfo(prev => ({
+            ...prev,
+            businessNumber: formData.businessNumber,
+            companyName: formData.companyName,
+            phone: formData.phone,
+        }));
+
+        switch (categoryRef.current) {
+            case 'paper_request': {
+                const paperEditContent =
+                    `*상호명 : ${formData.companyName}\n` +
+                    `*전화번호 : ${formData.phone}\n` +
+                    `*주소 : ${formData.address || ''}`;
+                completeInquiry({
+                    ...confirmedStoreRef.current,
+                    category: 'paper_request',
+                    completeMessage: "완료되었습니다.",
+                    contentOverride: paperEditContent,
+                });
+                break;
+            }
+            case 'sales_report': {
+                const salesEditContent =
+                    `*가맹점명 : ${formData.companyName}\n` +
+                    `*전화번호 : ${formData.phone}`;
+                completeInquiry({
+                    ...confirmedStoreRef.current,
+                    category: 'sales_report',
+                    completeMessage: "완료되었습니다.",
+                    contentOverride: salesEditContent,
+                });
+                break;
+            }
+            case 'kiosk_menu_update': {
+                const kioskEditContent =
+                    `*가맹점명 : ${formData.companyName}\n` +
+                    `*전화번호 : ${formData.phone}`;
+                completeInquiry({
+                    ...confirmedStoreRef.current,
+                    category: 'kiosk_menu_update',
+                    completeMessage: "완료되었습니다.",
+                    contentOverride: kioskEditContent,
+                });
+                break;
+            }
+            default:
+                showDetailStep();
+                break;
+        }
+    };
+
+    const handleRegisterCancel = () => {
+        setShowRegisterForm(false);
+        getFirstMenu();
+    };
+
+    // 문의 접수 확인 응답 - 완료 후 "잠깐만요" 피드백 카드는 표시하지 않는다.
+    const handleInquiryConfirm = async (confirmed: boolean, displayData: any) => {
+        setSectionContent(prev => [...prev,
+            <View key={`message-${Date.now()}`}
+                style={[styles.messageContainer, styles.userMessage]}>
+                <Text style={[styles.messageText, styles.userMessageText]}>
+                    {confirmed ? "네" : "아니오"}
+                </Text>
+            </View>
+        ]);
+
+        if (!confirmed) {
+            getFirstMenu();
+            return;
+        }
+
+        await completeInquiry(displayData);
     };
 
     // 파일 선택 핸들러
@@ -591,23 +1027,10 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         Alert.alert(`${faq.question}`, `${faq.answer}`);
     };
 
-    const getStepInfo = () => {
-        const isSales = categoryRef.current === 'sales_report';
-        return {
-            totalSteps: isSales ? 5 : 4,
-            stepOffset: isSales ? 1 : 0,
-        };
-    };
-
     const showBusinessNumberStep = () => {
-        const { totalSteps, stepOffset } = getStepInfo();
         setSectionContent(prev => [...prev,
             <View style={styles.inquiryForm} key={`inquiry-bn-${Date.now()}`}>
                 <View style={styles.header}>
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.stepNumber}>{1 + stepOffset}</Text>
-                        <Text style={styles.stepText}>/{totalSteps} 단계</Text>
-                    </View>
                     <View style={styles.headerTextContainer}>
                         <Text style={styles.inquirytitle}>문의 정보 수집</Text>
                         <Text style={styles.question}>사업자번호를 입력해주세요.</Text>
@@ -619,10 +1042,10 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
                         빠른 처리를 위해 몇 가지 정보를 수집하겠습니다.
                     </Text>
                     <Text style={styles.subTitle}>
-                        첫 번째로, 사업자번호를 입력하세요.
+                        보안 키패드로 사업자번호를 입력하세요.
                     </Text>
                     <Text style={styles.assistantText}>
-                        (예: 1234567890)
+                        (숫자 10자리)
                     </Text>
                 </View>
             </View>,
@@ -633,7 +1056,7 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
                 </TouchableOpacity>
             </View>
         ]);
-        setInquiryStep(1);
+        setInquiryStep('business_number');
         onRequestSecureNumPad?.();
     };
 
@@ -641,10 +1064,6 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         setSectionContent(prev => [...prev,
             <View style={styles.inquiryForm} key={`inquiry-period-${Date.now()}`}>
                 <View style={styles.header}>
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.stepNumber}>1</Text>
-                        <Text style={styles.stepText}>/5 단계</Text>
-                    </View>
                     <View style={styles.headerTextContainer}>
                         <Text style={styles.inquirytitle}>조회 기간</Text>
                         <Text style={styles.question}>매출 내역 조회 기간을 선택해주세요.</Text>
@@ -683,7 +1102,7 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
                 </TouchableOpacity>
             </View>
         ]);
-        setInquiryStep(-1);
+        setInquiryStep('sales_period');
     };
 
     const handlePeriodSelect = (period: string) => {
@@ -699,10 +1118,6 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
             setSectionContent(prev => [...prev,
                 <View style={styles.inquiryForm} key={`inquiry-custom-date-${Date.now()}`}>
                     <View style={styles.header}>
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>1</Text>
-                            <Text style={styles.stepText}>/5 단계</Text>
-                        </View>
                         <View style={styles.headerTextContainer}>
                             <Text style={styles.inquirytitle}>기간 직접입력</Text>
                             <Text style={styles.question}>시작일과 종료일을 입력해주세요.</Text>
@@ -722,10 +1137,10 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
                     </TouchableOpacity>
                 </View>
             ]);
-            setInquiryStep(-2);
+            setInquiryStep('custom_period');
         } else {
             salesPeriodRef.current = period;
-            showBusinessNumberStep();
+            showReceiveMethodStep();
         }
     };
 
@@ -733,6 +1148,10 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         setInquiryInfo(prev => ({ ...prev, category }));
         categoryRef.current = category;
         salesPeriodRef.current = null;
+        confirmedStoreRef.current = null;
+        isRegistrationRef.current = false;
+        registerEntryRef.current = null;
+        businessNumberRef.current = "";
         setCustomDateRange({ start: "", end: "" });
         setInquiryStatus(true);
 
@@ -750,11 +1169,8 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         );
         setSectionContent(prev => [...prev, messageComponent]);
 
-        if (category === 'sales_report') {
-            showSalesPeriodStep();
-        } else {
-            showBusinessNumberStep();
-        }
+        // 모든 카테고리: 사업자번호 입력부터 시작 (garam_frontend와 동일)
+        showBusinessNumberStep();
     };
 
     const getFirstMenu = () => {
@@ -762,6 +1178,11 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
         setInquiryStep(0);
         categoryRef.current = null;
         salesPeriodRef.current = null;
+        isRegistrationRef.current = false;
+        confirmedStoreRef.current = null;
+        registerEntryRef.current = null;
+        businessNumberRef.current = "";
+        setShowRegisterForm(false);
         setCustomDateRange({ start: "", end: "" });
         setInquiryInfo({
             category: "",
@@ -990,205 +1411,87 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
 
         if (inquiryStatus === true) {
             const currentStep = inquiryStep;
-            const { totalSteps, stepOffset } = getStepInfo();
 
-            if (currentStep === -2) {
-                // 직접입력 날짜 범위 처리
+            if (currentStep === 'custom_period') {
+                // 매출내역 기간 직접입력 → 자료 수신 방법 단계로
                 salesPeriodRef.current = text.trim();
-                showBusinessNumberStep();
-            } else if (currentStep === 1) {
+                showReceiveMethodStep();
+            } else if (currentStep === 'business_number') {
+                // 사업자번호 입력 (보안 키패드로 입력됨) → 고객 자동검색
+                businessNumberRef.current = text;
                 setInquiryInfo((prev: any) => ({
                     ...prev,
                     businessNumber: text
                 }));
 
-                // 사업자번호로 고객 자동검색
                 try {
                     const cleanInput = text.replace(/[^0-9]/g, '');
                     const res = await axios.get(`${REACT_APP_API_URL}/customer/search`, {
                         params: { q: cleanInput || text, limit: 10 }
                     });
-                    const customer = res.data?.find((c: any) => {
+                    const list = res.data?.items || res.data || [];
+                    const customer = list.find((c: any) => {
                         const cleanBn = (c.business_number || '').replace(/[^0-9]/g, '');
                         return cleanInput && cleanBn && cleanInput === cleanBn;
                     });
 
                     if (customer) {
+                        // 등록된 가맹점 → 가맹점 확인(예/아니오)
                         setInquiryInfo((prev: any) => ({
                             ...prev,
                             companyName: customer.business_name || prev.companyName,
                             phone: customer.phone || prev.phone,
                         }));
-
-                        setSectionContent(prev => [...prev,
-                            <View key={`autofill-${Date.now()}`}
-                                style={[styles.messageContainer, styles.botMessage]}>
-                                <Text style={[styles.messageText, styles.botMessageText]}>
-                                    등록된 사업자 정보를 찾았습니다.{"\n"}
-                                    {"\u2022"} 상호명: {customer.business_name}{"\n"}
-                                    {"\u2022"} 전화번호: {customer.phone}{"\n"}{"\n"}
-                                    자동으로 입력되었습니다. 문의 내용을 입력해주세요.
-                                </Text>
-                            </View>
-                        ]);
-
-                        setSectionContent(prev => [...prev, buildInquiryDetailStepContent(filePreviews, totalSteps, stepOffset)]);
-                        setInquiryStep(4);
+                        showConfirmStoreStep({
+                            businessNumber: text,
+                            companyName: customer.business_name,
+                            phone: customer.phone,
+                            address: customer.address,
+                            ownerName: customer.owner_name,
+                        });
                         return;
                     }
                 } catch (err) {
                     console.log("고객 검색 실패:", err);
                 }
 
-                setSectionContent(prev => [...prev,
-                <View style={styles.inquiryForm} key={`inquiry-cn-${Date.now()}`}>
-                    <View style={styles.header}>
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>{2 + stepOffset}</Text>
-                            <Text style={styles.stepText}>/{totalSteps} 단계</Text>
-                        </View>
-                        <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>상호명</Text>
-                            <Text style={styles.question}>상호명을 입력해주세요.</Text>
-                        </View>
-                    </View>
-                    <View style={styles.messageSection}>
-                        <Text style={styles.subTitle}>
-                            두 번째로, 상호명을 입력하세요.
-                        </Text>
-                        <Text style={styles.assistantText}>
-                            (예: 가람포스텍)
-                        </Text>
-                    </View>
-                </View>,
-                <View style={styles.bottomNav} key={`nav-cn-${Date.now()}`}>
-                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
-                        <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
-                    </TouchableOpacity>
-                </View>
-                ]);
-                setInquiryStep(2);
-            } else if (currentStep === 2) {
-                setInquiryInfo((prev: any) => ({
-                    ...prev,
-                    companyName: text
-                }));
+                // 미등록 사업자번호 → "아니오" 경로와 동일하게 직접입력 모달 표시
+                registerEntryRef.current = 'unregistered';
+                confirmedStoreRef.current = null;
+                isRegistrationRef.current = true;
+                setShowRegisterForm(true);
+            } else if (currentStep === 'receive_method') {
+                // 매출내역: 접수 확인 단계 없이 자료 수신 방법 입력 후 바로 완료 처리
+                await completeInquiry({
+                    businessNumber: confirmedStoreRef.current?.businessNumber || inquiryInfo.businessNumber || businessNumberRef.current,
+                    companyName: confirmedStoreRef.current?.companyName || inquiryInfo.companyName,
+                    phone: confirmedStoreRef.current?.phone || inquiryInfo.phone,
+                    category: 'sales_report',
+                    receiveMethod: text,
+                    completeMessage: "접수가 완료되었습니다.",
+                });
+            } else if (currentStep === 'detail') {
+                setInquiryInfo((prev: any) => ({ ...prev, detail: text }));
 
-                setSectionContent(prev => [...prev,
-                <View style={styles.inquiryForm} key={`inquiry-ph-${Date.now()}`}>
-                    <View style={styles.header}>
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.stepNumber}>{3 + stepOffset}</Text>
-                            <Text style={styles.stepText}>/{totalSteps} 단계</Text>
-                        </View>
-                        <View style={styles.headerTextContainer}>
-                            <Text style={styles.inquirytitle}>전화번호</Text>
-                            <Text style={styles.question}>전화번호를 입력해주세요.</Text>
-                        </View>
-                    </View>
-                    <View style={styles.messageSection}>
-                        <Text style={styles.subTitle}>
-                            세 번째로, 전화번호를 입력하세요.
-                        </Text>
-                        <Text style={styles.assistantText}>
-                            (예: 010-1234-5678)
-                        </Text>
-                    </View>
-                </View>,
-                <View style={styles.bottomNav} key={`nav-ph-${Date.now()}`}>
-                    <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
-                        <Icon name="home" size={20} color="#333" />
-                        <Text style={styles.homeText}>처음으로</Text>
-                    </TouchableOpacity>
-                </View>
-                ]);
-
-                setInquiryStep(3);
-            } else if (currentStep === 3) {
-                setInquiryInfo((prev: any) => ({
-                    ...prev,
-                    phone: text
-                }));
-
-                setSectionContent(prev => [...prev, buildInquiryDetailStepContent(filePreviews, totalSteps, stepOffset)]);
-                setInquiryStep(4);
-            } else if (currentStep === 4) {
-                setInquiryInfo((prev: any) => ({
-                    ...prev,
-                    detail: text
-                }));
-
-                const currentFilePreviews = filePreviewsRef.current;
-                const currentSelectedFiles = selectedFilesRef.current;
-                const filesToUpload = currentFilePreviews.length > 0 ? currentFilePreviews : currentSelectedFiles;
-
-                await createInquiry(text, filesToUpload);
-                setSectionContent(prev => [...prev,
-                <View key={`result-${Date.now()}`} style={[styles.messageContainer, styles.botMessage]}>
-                    <Text style={styles.inquirytitle}>📝문의가 접수되었습니다.</Text>
-                    <View style={styles.messageSectionResult}>
-                        <Text style={styles.assistantText}>
-                            접수 정보 :{"\n"}
-                            • 사업자번호: {inquiryInfo.businessNumber}{"\n"}
-                            • 상호명: {inquiryInfo.companyName}{"\n"}
-                            • 연락처: {inquiryInfo.phone}{"\n"}
-                            • 문의 내용: {salesPeriodRef.current ? `[${salesPeriodRef.current}] ` : ""}{text}{"\n"}
-                            {filePreviews.length > 0 && (
-                                <>
-                                    • 첨부파일: {filePreviews.length}개{"\n"}
-                                </>
-                            )}
-                            {"\n"}
-                            귀하의 문의사항이 정상적으로 접수되었습니다.{"\n"}
-                            담당자가 확인 후 영업일 기준 1-2일 내에 연락드리겠습니다.{"\n"}
-                            {"\n"}
-                            긴급한 사항인 경우 1588-1234로 직접 연락주시기 바랍니다.{"\n"}
-                            {"\n"}
-                            감사합니다! 🙏
-                        </Text>
-                    </View>
-                </View>
-                ]);
-                setSectionContent(prev => [
-                    ...prev,
-                    <View style={styles.feedbackForm} key={`feedback-${Date.now()}`}>
-                        <Text style={styles.titleText}>잠깐만요!</Text>
-                        <Text style={styles.feedbackText}>
-                            오늘 상담이 도움이 되셨나요?{"\n"}
-                            여러분의 소중한 의견을 들려주세요.
-                        </Text>
-
-                        <View style={styles.feedbackButtonContainer}>
-                            <TouchableOpacity
-                                style={[styles.feedbackButton, styles.reviewButton]}
-                                onPress={() => handleReview("helpful")}
-                            >
-                                <Text style={styles.buttonText}>👍 네, 도움이 되었어요</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.feedbackButton, styles.reviewButton]}
-                                onPress={() => handleReview("not_helpful")}
-                            >
-                                <Text style={styles.buttonText}>👎 아니요, 더 개선이 필요해요</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>,
-                    <View style={styles.bottomNav} key={`nav-feedback-${Date.now()}`}>
-                        <TouchableOpacity style={styles.homeButton} onPress={getFirstMenu}>
-                            <Icon name="home" size={20} color="#333" />
-                            <Text style={styles.homeText}>처음으로</Text>
-                        </TouchableOpacity>
-                    </View>
-                ]);
-
-                setInquiryStep(0);
-                setInquiryStatus(false);
-                setSelectedFiles([]);
-                setFilePreviews([]);
-                selectedFilesRef.current = [];
-                filePreviewsRef.current = [];
+                if (categoryRef.current === 'kiosk_menu_update') {
+                    // 메뉴 수정: 접수 확인 단계 생략하고 바로 완료 처리
+                    await completeInquiry({
+                        businessNumber: confirmedStoreRef.current?.businessNumber || inquiryInfo.businessNumber || businessNumberRef.current,
+                        companyName: confirmedStoreRef.current?.companyName || inquiryInfo.companyName,
+                        phone: confirmedStoreRef.current?.phone || inquiryInfo.phone,
+                        category: 'kiosk_menu_update',
+                        detail: text,
+                        completeMessage: "접수해주신 내용을 확인 후 작업 진행 예정이며, 완료 시 연락 드리겠습니다.",
+                    });
+                } else {
+                    // 그 외: 접수 확인 단계로
+                    showConfirmInquiryStep({
+                        businessNumber: confirmedStoreRef.current?.businessNumber || inquiryInfo.businessNumber || businessNumberRef.current,
+                        companyName: confirmedStoreRef.current?.companyName || inquiryInfo.companyName,
+                        phone: confirmedStoreRef.current?.phone || inquiryInfo.phone,
+                        detail: text,
+                    });
+                }
             }
         } else {
             const data = await requestAssistantAnswer(text);
@@ -1516,6 +1819,27 @@ const ChatSection = forwardRef<ChatSectionRef, ChatSectionProps>(({ onStreamingS
                     </ScrollView>
                 </View>
             </Modal>
+
+            <Modal
+                visible={showRegisterForm}
+                transparent
+                animationType="fade"
+                onRequestClose={handleRegisterCancel}
+            >
+                <BusinessRegisterForm
+                    visible={showRegisterForm}
+                    businessNumber={businessNumberRef.current}
+                    includeAddress={categoryRef.current === 'paper_request'}
+                    companyLabel={categoryRef.current === 'paper_request' ? '상호명' : '가맹점명'}
+                    subtitle={
+                        categoryRef.current === 'paper_request'
+                            ? (registerEntryRef.current === 'unregistered' ? '내용을 입력해주세요.' : '수정할 내용을 입력해주세요.')
+                            : '사업자번호/가맹점명/전화번호 입력해주시면 연락드리겠습니다.'
+                    }
+                    onSubmit={handleRegisterSubmit}
+                    onCancel={handleRegisterCancel}
+                />
+            </Modal>
         </>
     );
 });
@@ -1659,28 +1983,19 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
         justifyContent: "space-between",
     },
-    stepContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#323232",
-        padding: 8,
-        paddingHorizontal: 14,
-        borderRadius: 20,
-    },
-    stepNumber: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#fff"
-    },
-    stepText: {
-        fontSize: 13,
-        marginLeft: 2,
-        fontWeight: "500",
-        color: "#fff"
-    },
     headerTextContainer: {
         flex: 1,
-        marginLeft: 16,
+    },
+    confirmStoreGuide: {
+        fontSize: 13,
+        color: "#666",
+        marginTop: 10,
+    },
+    disclaimerText: {
+        fontSize: 12,
+        color: "#999",
+        marginTop: 10,
+        lineHeight: 18,
     },
     inquirytitle: {
         fontSize: 16,
@@ -1816,6 +2131,63 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 2,
         borderColor: '#fff',
+    },
+    confirmStoreInfo: {
+        backgroundColor: '#FAFAFA',
+        borderRadius: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+    },
+    confirmStoreRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#EEE',
+    },
+    confirmStoreLabel: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
+    },
+    confirmStoreValue: {
+        fontSize: 14,
+        color: '#111',
+        fontWeight: '600',
+        flexShrink: 1,
+        textAlign: 'right',
+    },
+    confirmStoreButtons: {
+        flexDirection: 'row',
+        marginTop: 16,
+        gap: 10,
+    },
+    confirmButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+    },
+    confirmButtonYes: {
+        backgroundColor: '#3B82F6',
+        borderColor: '#3B82F6',
+    },
+    confirmButtonYesText: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    confirmButtonNo: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#D1D5DB',
+    },
+    confirmButtonNoText: {
+        color: '#374151',
+        fontSize: 15,
+        fontWeight: '700',
     },
 
     noticeBackdrop: {
